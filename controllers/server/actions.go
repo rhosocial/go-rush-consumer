@@ -1,13 +1,15 @@
 package controllerServer
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"go-rush-consumer/component"
 	"net/http"
 )
 
 type ActionStatusResponseData struct {
-	IsConnected bool `json:"is_connected"`
+	RedisServers map[uint8]component.RedisServerStatus `json:"redis_servers"`
+	Activities   map[uint64]bool                       `json:"activities"`
 }
 
 func ActionStatus(c *gin.Context) {
@@ -15,11 +17,9 @@ func ActionStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "No activities", nil, nil))
 		return
 	}
-	data := make(map[uint64]ActionStatusResponseData)
-	for i, activity := range component.Activities.Activities {
-		data[i] = ActionStatusResponseData{
-			IsConnected: activity.Client != nil,
-		}
+	data := ActionStatusResponseData{
+		RedisServers: component.GetRedisServerStatus(context.Background()),
+		Activities:   component.Activities.Status(),
 	}
 	c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "Activities existed", data, nil))
 }

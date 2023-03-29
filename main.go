@@ -24,18 +24,11 @@ func main() {
 		println(err)
 		return
 	}
-	activity, err := component.Activities.GetActivity(activityID)
+	_, err = component.Activities.GetActivity(activityID)
 	if err != nil {
 		println(err)
 		return
 	}
-	defer func(activity *component.Activity) {
-		err := activity.Close()
-		if err != nil {
-			println(err)
-			return
-		}
-	}(activity)
 	r = gin.New()
 	if !configEngine(r) {
 		return

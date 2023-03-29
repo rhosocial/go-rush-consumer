@@ -8,17 +8,10 @@ import (
 )
 
 func worker(ctx context.Context, interval time.Duration, activityID uint64) {
-	activity, err := Activities.GetActivity(activityID)
+	_, err := Activities.GetActivity(activityID)
 	if err != nil {
 		panic(err)
 	}
-
-	defer func(activity *Activity) {
-		err := activity.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(activity)
 	for {
 		time.Sleep(interval)
 		select {

@@ -1,9 +1,14 @@
 package component
 
 import (
+	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"gopkg.in/yaml.v3"
+	"net"
 	"os"
+	"sync/atomic"
+	"time"
 )
 
 type EnvNet struct {
@@ -60,16 +65,57 @@ func LoadEnvFromDefaultYaml() error {
 	return LoadEnvFromYaml("default.yaml")
 }
 
-func (e *Env) GetRedisConnection(idx *uint8) *RedisConnection {
-	i := uint8(0)
-	if idx != nil && *idx < 16 && *idx < uint8(len(GlobalEnv.RedisServers)) {
-		i = *idx
+func (e *Env) GetRedisConnectionCount() int {
+	return len(GlobalEnv.RedisServers)
+}
+
+func (e *Env) GetRedisServerTurns() []uint8 {
+	turns := make([]uint8, len(GlobalEnv.RedisServers))
+	for i, v := range GlobalEnv.RedisServers {
+		turns[i] = v.Weight
 	}
-	conn := RedisConnection{
-		Addr:     fmt.Sprintf("%s:%d", GlobalEnv.RedisServers[i].Host, GlobalEnv.RedisServers[i].Port),
-		Username: GlobalEnv.RedisServers[i].Username,
-		Password: GlobalEnv.RedisServers[i].Password,
-		DB:       GlobalEnv.RedisServers[i].DB,
+	return turns
+}
+
+func (e *EnvRedisServer) GetRedisOptions() *redis.Options {
+	options := redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", e.Host, e.Port),
+		Username: e.Username,
+		Password: e.Password,
+		DB:       e.DB,
+		Dialer: func(ctx context.Context, network, address string) (net.Conn, error) {
+			netDialer := &net.Dialer{
+				Timeout:   1 * time.Second,
+				KeepAlive: 5 * time.Minute,
+			}
+			return netDialer.Dial(network, address)
+		},
 	}
-	return &conn
+	return &options
+}
+
+var redisClientTurnIndex atomic.Int64
+var redisClientTurnMap []uint8
+
+func GetRedisClientTurnMap() []uint8 {
+	if len(redisClientTurnMap) > 0 {
+		return redisClientTurnMap
+	}
+	turns := GlobalEnv.GetRedisServerTurns()
+	turnMap := make([]uint8, 0)
+	for i, v := range turns {
+		for j := 0; j < int(v); j++ {
+			turnMap = append(turnMap, uint8(i))
+		}
+	}
+	redisClientTurnMap = turnMap
+	return turnMap
+}
+
+func GetRedisOptions() *redis.Options {
+	return GlobalEnv.RedisServers[GetRedisClientTurnMap()[redisClientTurnIndex.Add(1)%int64(len(GetRedisClientTurnMap()))]].GetRedisOptions()
+}
+
+func GetRedisClient() *redis.Client {
+	return redis.NewClient(GetRedisOptions())
 }

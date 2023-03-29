@@ -94,11 +94,18 @@ func (a *ControllerActivity) ActionDelete(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
+	activity.ContextCancelFuncRWLock.Lock()
+	defer activity.ContextCancelFuncRWLock.Unlock()
 	if activity.ContextCancelFunc != nil {
 		c.AbortWithStatusJSON(http.StatusForbidden, component.NewGenericResponse(c, 1, "activity is working", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "Controller Activity, Action Delete.", nil, nil))
+	err = component.Activities.RemoveActivity(body.ActivityID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "failed to remove the activity", err.Error(), nil))
+		return
+	}
+	c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "activity removed", nil, nil))
 }
 
 type ControllerActivity struct {
@@ -109,7 +116,7 @@ func (c *ControllerActivity) RegisterActions(r *gin.Engine) {
 	controller := r.Group("/activity")
 	{
 		controller.PUT("", c.ActionAdd)
-		controller.DELETE("", c.ActionDelete)
+		controller.POST("/delete", c.ActionDelete)
 		controller.GET("", c.ActionStatus)
 		controller.POST("/start", c.ActionStart)
 		controller.POST("/stop", c.ActionStop)

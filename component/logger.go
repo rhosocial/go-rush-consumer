@@ -36,15 +36,15 @@ func LogFormatter(param gin.LogFormatterParams) string {
 	return defaultLogFormatter(param)
 }
 
-var idx atomic.Int64
+var requestIDIndex atomic.Int64
 
 const (
 	RequestID = "RequestID"
 )
 
-// NewLogIDUint32 获取一个新的logid
+// NewRequestID 返回一个新的请求ID。
 func NewRequestID(c *gin.Context) {
-	usec := time.Now().UnixNano() + idx.Add(1)
+	usec := time.Now().UnixNano() + requestIDIndex.Add(1)
 	requestID := uint32(usec&0x7FFFFFFF | 0x80000000)
 	c.Set(RequestID, requestID)
 	c.Next()
