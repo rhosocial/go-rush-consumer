@@ -29,8 +29,10 @@ func (a *ActivityPool) Capacity() int {
 }
 
 func (a *ActivityPool) New(id uint64) error {
+	a.ActivitiesRWLock.Lock()
+	defer a.ActivitiesRWLock.Unlock()
 	if _, existed := a.Activities[id]; existed {
-		return errors.New("activity id existed")
+		return ErrActivityExisted
 	}
 	a.Activities[id] = &Activity{
 		ID: id,
@@ -44,16 +46,33 @@ func (a *ActivityPool) ActivityExists(id uint64) bool {
 }
 
 func (a *ActivityPool) GetActivity(id uint64) (*Activity, error) {
+	a.ActivitiesRWLock.Lock()
+	defer a.ActivitiesRWLock.Unlock()
 	activity, existed := a.Activities[id]
 	if !existed {
-		return nil, errors.New("activity id not exist")
+		return nil, ErrActivityNotExist
 	}
 	return activity, nil
 }
 
-func (a *ActivityPool) RemoveActivity(id uint64) error {
-	if !a.ActivityExists(id) {
-		return errors.New("activity not exist")
+var ErrActivityNotExist = errors.New("activity not exist")
+var ErrActivityExisted = errors.New("activity existed")
+
+func (a *ActivityPool) Remove(id uint64, stopBeforeRemoving bool) error {
+	a.ActivitiesRWLock.Lock()
+	defer a.ActivitiesRWLock.Unlock()
+	activity, existed := a.Activities[id]
+	if !existed {
+		return ErrActivityNotExist
+	}
+	if activity.IsWorking() {
+		if !stopBeforeRemoving {
+			return ErrWorkerIsWorking
+		}
+		err := activity.Stop()
+		if err != nil {
+			return err
+		}
 	}
 	delete(a.Activities, id)
 	return nil
@@ -80,19 +99,6 @@ type RedisConnection struct {
 	DB       int
 }
 
-func NewRedisConnection(conn *RedisConnection) (*redis.Client, error) {
-	if conn == nil {
-		return nil, errors.New("invalid redis connection")
-	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     conn.Addr,
-		Username: conn.Username,
-		Password: conn.Password,
-		DB:       conn.DB,
-	})
-	return rdb, nil
-}
-
 func (c *Activity) GetRedisServerApplicationKeyName() string {
 	return fmt.Sprintf("%s%d", GlobalEnv.Activity.RedisServer.KeyPrefix.Application, c.ID)
 }
@@ -105,11 +111,14 @@ func (c *Activity) GetRedisServerSeatKeyName() string {
 	return fmt.Sprintf("%s%d", GlobalEnv.Activity.RedisServer.KeyPrefix.Seat, c.ID)
 }
 
+var ErrWorkerHasBeenStopped = errors.New("the worker has already been stopped")
+var ErrWorkerIsWorking = errors.New("the worker is working")
+
 func (c *Activity) Start(ctx context.Context) error {
 	c.ContextCancelFuncRWLock.Lock()
 	defer c.ContextCancelFuncRWLock.Unlock()
 	if c.ContextCancelFunc != nil {
-		return errors.New("there is already a worker started")
+		return ErrWorkerIsWorking
 	}
 	ctxChild, cancel := context.WithCancel(ctx)
 	c.ContextCancelFunc = cancel
@@ -120,13 +129,18 @@ func (c *Activity) Start(ctx context.Context) error {
 func (c *Activity) Stop() error {
 	c.ContextCancelFuncRWLock.Lock()
 	defer c.ContextCancelFuncRWLock.Unlock()
-	cancelFunc := c.ContextCancelFunc
-	if cancelFunc == nil {
-		return errors.New("the worker has already been stopped")
+	if c.ContextCancelFunc == nil {
+		return ErrWorkerHasBeenStopped
 	}
-	cancelFunc()
+	c.ContextCancelFunc()
 	c.ContextCancelFunc = nil
 	return nil
+}
+
+func (c *Activity) IsWorking() bool {
+	c.ContextCancelFuncRWLock.Lock()
+	defer c.ContextCancelFuncRWLock.Unlock()
+	return c.ContextCancelFunc != nil
 }
 
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {

@@ -72,35 +72,30 @@ func (a *ControllerActivity) ActionAdd(c *gin.Context) {
 	var body ActivityBody
 	err := c.ShouldBindWith(&body, binding.FormPost)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not valid", nil, nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	if component.Activities.ActivityExists(body.ActivityID) {
-		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity exists", nil, nil))
+	err = component.Activities.New(body.ActivityID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "failed to add new activity", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "Controller Activity, Action Add.", nil, nil))
+	c.JSON(http.StatusOK, component.NewGenericResponse(c, 0, "activity added", nil, nil))
+}
+
+type ActivityBodyDelete struct {
+	ActivityBody
+	StopBeforeRemoving bool `form:"stop_before_removing" json:"stop_before_removing,omitempty" default:"false"`
 }
 
 func (a *ControllerActivity) ActionDelete(c *gin.Context) {
-	var body ActivityBody
+	var body ActivityBodyDelete
 	err := c.ShouldBindWith(&body, binding.FormPost)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not valid", nil, nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	activity, err := component.Activities.GetActivity(body.ActivityID)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
-		return
-	}
-	activity.ContextCancelFuncRWLock.Lock()
-	defer activity.ContextCancelFuncRWLock.Unlock()
-	if activity.ContextCancelFunc != nil {
-		c.AbortWithStatusJSON(http.StatusForbidden, component.NewGenericResponse(c, 1, "activity is working", err.Error(), nil))
-		return
-	}
-	err = component.Activities.RemoveActivity(body.ActivityID)
+	err = component.Activities.Remove(body.ActivityID, body.StopBeforeRemoving)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, component.NewGenericResponse(c, 1, "failed to remove the activity", err.Error(), nil))
 		return

@@ -2,24 +2,9 @@ package component
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"sync"
 )
-
-var GlobalRedisClient *redis.Client
-var GlobalRedisClientRWLock sync.RWMutex
-
-func ConnectRedisServer(options *redis.Options) error {
-	GlobalRedisClientRWLock.Lock()
-	defer GlobalRedisClientRWLock.Unlock()
-	if GlobalRedisClient != nil {
-		return errors.New("redis client existed")
-	}
-	GlobalRedisClient = redis.NewClient(options)
-	return nil
-}
 
 type RedisServerStatus struct {
 	Valid   bool   `json:"valid"`
