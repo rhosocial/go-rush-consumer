@@ -15,13 +15,24 @@ type EnvNet struct {
 	ListenPort uint16 `yaml:"ListenPort" default:"8080"`
 }
 
+type EnvRedisServerDialer struct {
+	KeepAlive uint8 `yaml:"KeepAlive,omitempty" default:"5"`
+	Timeout   uint8 `yaml:"Timeout,omitempty" default:"1"`
+}
+
+func (c *EnvRedisServer) GetDialerDefault() *EnvRedisServerDialer {
+	d := EnvRedisServerDialer{}
+	return &d
+}
+
 type EnvRedisServer struct {
-	Host     string `yaml:"Host,omitempty" default:"localhost"`
-	Port     uint16 `yaml:"Port,omitempty" default:"6379"`
-	Username string `yaml:"Username,omitempty" default:""`
-	Password string `yaml:"Password,omitempty" default:""`
-	DB       int    `yaml:"DB,omitempty" default:"0"`
-	Weight   uint8  `yaml:"Weight,omitempty" default:"1"`
+	Host     string                `yaml:"Host,omitempty" default:"localhost"`
+	Port     uint16                `yaml:"Port,omitempty" default:"6379"`
+	Username string                `yaml:"Username,omitempty" default:""`
+	Password string                `yaml:"Password,omitempty" default:""`
+	DB       int                   `yaml:"DB,omitempty" default:"0"`
+	Weight   uint8                 `yaml:"Weight,omitempty" default:"1"`
+	Dialer   *EnvRedisServerDialer `yaml:"Dialer,omitempty"`
 }
 
 type EnvActivityRedisServerKeyPrefix struct {
@@ -84,9 +95,13 @@ func (e *EnvRedisServer) GetRedisOptions() *redis.Options {
 		Password: e.Password,
 		DB:       e.DB,
 		Dialer: func(ctx context.Context, network, address string) (net.Conn, error) {
+			config := e.Dialer
+			if config == nil {
+				config = e.GetDialerDefault()
+			}
 			netDialer := &net.Dialer{
-				Timeout:   1 * time.Second,
-				KeepAlive: 5 * time.Minute,
+				Timeout:   time.Duration(config.Timeout) * time.Second,
+				KeepAlive: time.Duration(config.KeepAlive) * time.Minute,
 			}
 			return netDialer.Dial(network, address)
 		},
