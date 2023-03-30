@@ -3,7 +3,6 @@ package component
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 )
 
 type RedisServerStatus struct {
@@ -13,13 +12,12 @@ type RedisServerStatus struct {
 
 func GetRedisServerStatus(ctx context.Context) map[uint8]RedisServerStatus {
 	result := make(map[uint8]RedisServerStatus)
-	for i, c := range GlobalEnv.RedisServers {
+	for i, c := range *GlobalEnv.GetRedisClients() {
 		status := RedisServerStatus{
 			Valid: false,
 		}
-		client := redis.NewClient(c.GetRedisOptions())
-		poolStats := client.PoolStats()
-		if _, err := client.Ping(ctx).Result(); err != nil {
+		poolStats := c.PoolStats()
+		if _, err := c.Ping(ctx).Result(); err != nil {
 			status.Valid = false
 			status.Message = err.Error()
 		} else {

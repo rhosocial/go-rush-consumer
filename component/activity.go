@@ -144,7 +144,7 @@ func (c *Activity) IsWorking() bool {
 }
 
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
-	result := GetRedisClient().LLen(ctx, c.GetRedisServerApplicationKeyName())
+	result := GlobalEnv.GetCurrentRedisClient().LLen(ctx, c.GetRedisServerApplicationKeyName())
 	if result.Err() != nil {
 		panic(result.Err())
 	}
@@ -152,7 +152,7 @@ func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
 		return []string{}
 	}
 	batch := int(math.Min(float64(result.Val()), float64(GlobalEnv.Activity.Batch)))
-	values := GetRedisClient().LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
+	values := GlobalEnv.GetCurrentRedisClient().LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
 	return values.Val()
 }
 
@@ -166,7 +166,7 @@ func (c *Activity) PushApplicationsIntoSeatQueue(ctx context.Context, applicatio
 			continue
 		}
 		tm := time.Now().UnixMicro()
-		result := GetRedisClient().ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
+		result := GlobalEnv.GetCurrentRedisClient().ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
 			Score:  float64(tm),
 			Member: c.GetApplicant(ctx, value),
 		})
@@ -183,7 +183,7 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 	if len(application) == 0 {
 		return false
 	}
-	result := GetRedisClient().HExists(ctx, c.GetRedisServerApplicantKeyName(), application)
+	result := GlobalEnv.GetCurrentRedisClient().HExists(ctx, c.GetRedisServerApplicantKeyName(), application)
 	if result.Err() == nil {
 		return result.Val()
 	}
@@ -191,7 +191,7 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 }
 
 func (c *Activity) GetApplicant(ctx context.Context, application string) string {
-	result := GetRedisClient().HGet(ctx, c.GetRedisServerApplicantKeyName(), application)
+	result := GlobalEnv.GetCurrentRedisClient().HGet(ctx, c.GetRedisServerApplicantKeyName(), application)
 	if result.Err() == nil {
 		return result.Val()
 	}
@@ -199,7 +199,7 @@ func (c *Activity) GetApplicant(ctx context.Context, application string) string 
 }
 
 func (c *Activity) GetSeatCount(ctx context.Context) int64 {
-	result := GetRedisClient().ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf")
+	result := GlobalEnv.GetCurrentRedisClient().ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf")
 	if result.Err() == nil {
 		return result.Val()
 	}
