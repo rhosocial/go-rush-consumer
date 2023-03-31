@@ -122,7 +122,11 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancel(ctx)
 	c.ContextCancelFunc = cancel
-	go worker(ctxChild, time.Second, c.ID)
+	interval := GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].GetWorkerDefault().Interval
+	if GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker != nil {
+		interval = GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker.Interval
+	}
+	go worker(ctxChild, interval, c.ID)
 	return nil
 }
 

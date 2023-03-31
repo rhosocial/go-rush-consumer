@@ -20,8 +20,17 @@ type EnvRedisServerDialer struct {
 	Timeout   uint8 `yaml:"Timeout,omitempty" default:"1"`
 }
 
-func (c *EnvRedisServer) GetDialerDefault() *EnvRedisServerDialer {
-	d := EnvRedisServerDialer{}
+func (e *EnvRedisServer) GetDialerDefault() *EnvRedisServerDialer {
+	d := EnvRedisServerDialer{KeepAlive: 5, Timeout: 1}
+	return &d
+}
+
+type EnvRedisServerWorker struct {
+	Interval uint8 `yaml:"Interval,omitempty" default:"1"`
+}
+
+func (e *EnvRedisServer) GetWorkerDefault() *EnvRedisServerWorker {
+	d := EnvRedisServerWorker{Interval: 1}
 	return &d
 }
 
@@ -33,6 +42,7 @@ type EnvRedisServer struct {
 	DB       int                   `yaml:"DB,omitempty" default:"0"`
 	Weight   uint8                 `yaml:"Weight,omitempty" default:"1"`
 	Dialer   *EnvRedisServerDialer `yaml:"Dialer,omitempty"`
+	Worker   *EnvRedisServerWorker `yaml:"Worker,omitempty"`
 }
 
 type EnvActivityRedisServerKeyPrefix struct {
@@ -85,11 +95,17 @@ func (e *Env) GetCurrentRedisClient() *redis.Client {
 	if len(e.RedisServers) == 1 {
 		return (*e.GetRedisClients())[0]
 	}
+	return (*e.GetRedisClients())[e.GetCurrentRedisClientTurn()]
+}
+
+func (e *Env) GetCurrentRedisClientTurn() uint8 {
+	if len(e.RedisServers) <= 1 {
+		return 0
+	}
 	if len(redisClientTurnMap) == 0 {
 		redisClientTurnMap = GetRedisClientTurnMap()
 	}
-	turn := redisClientTurnMap[redisClientTurnIndex.Add(1)%int64(len(redisClientTurnMap))]
-	return (*e.GetRedisClients())[turn]
+	return redisClientTurnMap[redisClientTurnIndex.Add(1)%int64(len(redisClientTurnMap))]
 }
 
 var GlobalEnv Env

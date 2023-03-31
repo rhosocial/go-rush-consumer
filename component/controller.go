@@ -14,7 +14,7 @@ type GenericResponse struct {
 
 func NewGenericResponse(c *gin.Context, code uint32, message string, data any, extension any) *GenericResponse {
 	r := GenericResponse{
-		RequestID: c.Value(RequestID).(uint32),
+		RequestID: c.Value(ContextRequestID).(uint32),
 		Code:      code,
 		Message:   message,
 		Data:      data,
