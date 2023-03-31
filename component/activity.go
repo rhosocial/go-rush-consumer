@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -126,8 +127,24 @@ func (c *Activity) Start(ctx context.Context) error {
 	if GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker != nil {
 		interval = GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker.Interval
 	}
-	go worker(ctxChild, interval, c.ID)
+	go worker(ctxChild, interval, c.ID, processFunc)
 	return nil
+}
+
+var processFunc = func(ctx context.Context, activityID uint64) {
+	fmt.Printf("[%d]: working...\n", time.Now().Unix())
+	activity, err := Activities.GetActivity(activityID)
+	if err != nil {
+		panic(err)
+	}
+	results := activity.PopApplicationsFromQueue(ctx)
+	output := "<empty set>"
+	if len(results) > 0 {
+		output = strings.Join(results, ", ")
+		count := activity.PushApplicationsIntoSeatQueue(ctx, results)
+		println(fmt.Sprintf("%d application(s) accepted.", count))
+	}
+	println("Results:", output)
 }
 
 func (c *Activity) Stop() error {

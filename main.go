@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"go-rush-consumer/component"
 	controllerActivity "go-rush-consumer/controllers/activity"
 	"go-rush-consumer/controllers/server"
@@ -41,11 +42,11 @@ func main() {
 
 func configEngine(r *gin.Engine) bool {
 	r.Use(
-		component.AppendRequestID(),
-		gin.LoggerWithFormatter(component.LogFormatter),
-		component.AuthRequired(),
+		commonComponent.AppendRequestID(),
+		gin.LoggerWithFormatter(commonComponent.LogFormatter),
+		commonComponent.AuthRequired(),
 		gin.Recovery(),
-		component.ErrorHandler(),
+		commonComponent.ErrorHandler(),
 	)
 	r.GET("/status", controllerServer.ActionStatus)
 	var ca controllerActivity.ControllerActivity
