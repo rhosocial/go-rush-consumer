@@ -19,14 +19,7 @@ func main() {
 		return
 	}
 	component.Activities = component.InitActivityPool()
-	activityID := uint64(time.Now().Unix())
-	err := component.Activities.New(activityID)
-	if err != nil {
-		println(err.Error())
-		return
-	}
-	_, err = component.Activities.GetActivity(activityID)
-	if err != nil {
+	if err := initExamples(); err != nil {
 		println(err.Error())
 		return
 	}
@@ -38,6 +31,17 @@ func main() {
 		println(err.Error())
 		return
 	}
+}
+
+func initExamples() error {
+	activityID := uint64(time.Now().Unix())
+	if err := component.Activities.New(activityID); err != nil {
+		return err
+	}
+	if _, err := component.Activities.GetActivity(activityID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func configEngine(r *gin.Engine) bool {

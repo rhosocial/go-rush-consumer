@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"math"
 	"strings"
 	"sync"
@@ -123,9 +124,10 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancel(ctx)
 	c.ContextCancelFunc = cancel
-	interval := GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].GetWorkerDefault().Interval
-	if GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker != nil {
-		interval = GlobalEnv.RedisServers[GlobalEnv.GetCurrentRedisClientTurn()].Worker.Interval
+	server := GlobalEnv.RedisServers[*commonComponent.GlobalRedisClientPool.GetCurrentTurn()]
+	interval := server.GetWorkerDefault().Interval
+	if server.Worker != nil {
+		interval = server.Worker.Interval
 	}
 	go worker(ctxChild, interval, c.ID, processFunc)
 	return nil
@@ -164,16 +166,16 @@ func (c *Activity) IsWorking() bool {
 	return c.ContextCancelFunc != nil
 }
 
+var currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
+
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
-	result := GlobalEnv.GetCurrentRedisClient().LLen(ctx, c.GetRedisServerApplicationKeyName())
-	if result.Err() != nil {
+	batch := int(GlobalEnv.Activity.Batch)
+	if result := currentClient().LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
+	} else {
+		batch = int(math.Min(float64(result.Val()), float64(batch)))
 	}
-	if result.Val() == 0 {
-		return []string{}
-	}
-	batch := int(math.Min(float64(result.Val()), float64(GlobalEnv.Activity.Batch)))
-	values := GlobalEnv.GetCurrentRedisClient().LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
+	values := currentClient().LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
 	return values.Val()
 }
 
@@ -187,7 +189,7 @@ func (c *Activity) PushApplicationsIntoSeatQueue(ctx context.Context, applicatio
 			continue
 		}
 		tm := time.Now().UnixMicro()
-		result := GlobalEnv.GetCurrentRedisClient().ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
+		result := currentClient().ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
 			Score:  float64(tm),
 			Member: c.GetApplicant(ctx, value),
 		})
@@ -204,24 +206,21 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 	if len(application) == 0 {
 		return false
 	}
-	result := GlobalEnv.GetCurrentRedisClient().HExists(ctx, c.GetRedisServerApplicantKeyName(), application)
-	if result.Err() == nil {
+	if result := currentClient().HExists(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
 	return false
 }
 
 func (c *Activity) GetApplicant(ctx context.Context, application string) string {
-	result := GlobalEnv.GetCurrentRedisClient().HGet(ctx, c.GetRedisServerApplicantKeyName(), application)
-	if result.Err() == nil {
+	if result := currentClient().HGet(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
 	return ""
 }
 
 func (c *Activity) GetSeatCount(ctx context.Context) int64 {
-	result := GlobalEnv.GetCurrentRedisClient().ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf")
-	if result.Err() == nil {
+	if result := currentClient().ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf"); result.Err() == nil {
 		return result.Val()
 	}
 	return 0

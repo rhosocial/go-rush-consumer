@@ -19,7 +19,7 @@ func ActionStatus(c *gin.Context) {
 		return
 	}
 	data := ActionStatusResponseData{
-		RedisServers: commonComponent.GetRedisServerStatus(context.Background(), component.GlobalEnv.GetRedisClients()),
+		RedisServers: commonComponent.GlobalRedisClientPool.GetRedisServerStatus(context.Background()),
 		Activities:   component.Activities.Status(),
 	}
 	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "Activities existed", data, nil))
