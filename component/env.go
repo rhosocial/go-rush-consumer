@@ -46,6 +46,7 @@ func LoadEnvFromYaml(filepath string) error {
 	}
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(&env.RedisServers)
+	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
 	GlobalEnv = env
 	return nil
 }

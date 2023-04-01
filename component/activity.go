@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"log"
 	"math"
 	"strings"
 	"sync"
@@ -129,7 +130,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	if server.Worker != nil {
 		interval = server.Worker.Interval
 	}
-	go worker(ctxChild, interval, c.ID, processFunc)
+	go worker(ctxChild, interval, c.ID, processFunc, doneFunc)
 	return nil
 }
 
@@ -149,6 +150,10 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 	println("Results:", output)
 }
 
+var doneFunc = func(ctx context.Context, activityID uint64) {
+	log.Printf("[ActivityID: %d] worker done.\n", activityID)
+}
+
 func (c *Activity) Stop() error {
 	c.ContextCancelFuncRWLock.Lock()
 	defer c.ContextCancelFuncRWLock.Unlock()
@@ -166,7 +171,7 @@ func (c *Activity) IsWorking() bool {
 	return c.ContextCancelFunc != nil
 }
 
-var currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
+var currentClient func() *redis.Client
 
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
 	batch := int(GlobalEnv.Activity.Batch)
