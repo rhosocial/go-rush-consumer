@@ -135,7 +135,7 @@ func (c *Activity) Start(ctx context.Context) error {
 }
 
 var processFunc = func(ctx context.Context, activityID uint64) {
-	fmt.Printf("[%d]: working...\n", time.Now().Unix())
+	log.Printf("[%d]: working...\n", time.Now().Unix())
 	activity, err := Activities.GetActivity(activityID)
 	if err != nil {
 		panic(err)
@@ -145,9 +145,9 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 	if len(results) > 0 {
 		output = strings.Join(results, ", ")
 		count := activity.PushApplicationsIntoSeatQueue(ctx, results)
-		println(fmt.Sprintf("%d application(s) accepted.", count))
+		log.Printf("%d application(s) accepted.\n", count)
 	}
-	println("Results:", output)
+	log.Println("Results:", output)
 }
 
 var doneFunc = func(ctx context.Context, activityID uint64) {
@@ -175,12 +175,13 @@ var currentClient func() *redis.Client
 
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
 	batch := int(GlobalEnv.Activity.Batch)
-	if result := currentClient().LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
+	client := currentClient()
+	if result := client.LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
 	} else {
 		batch = int(math.Min(float64(result.Val()), float64(batch)))
 	}
-	values := currentClient().LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
+	values := client.LPopCount(ctx, c.GetRedisServerApplicationKeyName(), batch)
 	return values.Val()
 }
 
