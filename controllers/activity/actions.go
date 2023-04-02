@@ -103,6 +103,11 @@ func (a *ControllerActivity) ActionDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity removed", nil, nil))
 }
 
+func (a *ControllerActivity) ActionStopAll(c *gin.Context) {
+	count := component.Activities.StopAll()
+	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "all the workers stopped.", count, nil))
+}
+
 type ControllerActivity struct {
 	commonComponent.GenericController
 }
@@ -115,5 +120,6 @@ func (c *ControllerActivity) RegisterActions(r *gin.Engine) {
 		controller.GET("", c.ActionStatus)
 		controller.POST("/start", c.ActionStart)
 		controller.POST("/stop", c.ActionStop)
+		controller.POST("/stop-all", c.ActionStopAll)
 	}
 }

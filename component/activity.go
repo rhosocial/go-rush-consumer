@@ -89,6 +89,17 @@ func (a *ActivityPool) Status() map[uint64]bool {
 	return workings
 }
 
+func (a *ActivityPool) StopAll() int {
+	count := 0
+	for _, v := range a.Activities {
+		err := v.Stop()
+		if err == nil {
+			count++
+		}
+	}
+	return count
+}
+
 type Activity struct {
 	ID                      uint64
 	ContextCancelFuncRWLock sync.RWMutex
@@ -118,6 +129,10 @@ var ErrWorkerHasBeenStopped = errors.New("the worker has already been stopped")
 var ErrWorkerIsWorking = errors.New("the worker is working")
 
 func (c *Activity) Start(ctx context.Context) error {
+	turn := commonComponent.GlobalRedisClientPool.GetCurrentTurn()
+	if turn == nil {
+		panic(commonComponent.ErrRedisClientNil)
+	}
 	c.ContextCancelFuncRWLock.Lock()
 	defer c.ContextCancelFuncRWLock.Unlock()
 	if c.ContextCancelFunc != nil {
@@ -125,7 +140,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancel(ctx)
 	c.ContextCancelFunc = cancel
-	server := GlobalEnv.RedisServers[*commonComponent.GlobalRedisClientPool.GetCurrentTurn()]
+	server := GlobalEnv.RedisServers[*turn]
 	interval := server.GetWorkerDefault().Interval
 	if server.Worker != nil {
 		interval = server.Worker.Interval
@@ -135,7 +150,7 @@ func (c *Activity) Start(ctx context.Context) error {
 }
 
 var processFunc = func(ctx context.Context, activityID uint64) {
-	log.Printf("[%d]: working...\n", time.Now().Unix())
+	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
 	if err != nil {
 		panic(err)
@@ -145,13 +160,9 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 	if len(results) > 0 {
 		output = strings.Join(results, ", ")
 		count := activity.PushApplicationsIntoSeatQueue(ctx, results)
-		log.Printf("%d application(s) accepted.\n", count)
+		log.Printf("[ActivityID: %d] %d application(s) accepted.\n", activityID, count)
 	}
-	log.Println("Results:", output)
-}
-
-var doneFunc = func(ctx context.Context, activityID uint64) {
-	log.Printf("[ActivityID: %d] worker done.\n", activityID)
+	log.Printf("[ActivityID: %d] Results: %s", activityID, output)
 }
 
 func (c *Activity) Stop() error {
