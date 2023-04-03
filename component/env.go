@@ -32,6 +32,15 @@ type Env struct {
 	redisClients *[]*redis.Client
 }
 
+func (e *Env) Validate() error {
+	for _, v := range e.RedisServers {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var GlobalEnv Env
 
 func LoadEnvFromYaml(filepath string) error {
@@ -40,10 +49,13 @@ func LoadEnvFromYaml(filepath string) error {
 	if err != nil {
 		return err
 	}
-	err = yaml.Unmarshal(file, &env)
-	if err != nil {
+	if err := yaml.Unmarshal(file, &env); err != nil {
+		return nil
+	}
+	if err := env.Validate(); err != nil {
 		return err
 	}
+
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(&env.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
