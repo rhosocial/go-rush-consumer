@@ -1,10 +1,10 @@
 module go-rush-consumer
 
-go 1.20
+go 1.19
 
 require (
 	github.com/gin-gonic/gin v1.9.0
-	github.com/redis/go-redis/v9 v9.0.2
+	github.com/redis/go-redis/v9 v9.0.3
 	github.com/rhosocial/go-rush-common v0.0.0-00010101000000-000000000000
 	golang.org/x/net v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
