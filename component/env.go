@@ -8,8 +8,17 @@ import (
 )
 
 type EnvNet struct {
-	ListenPort uint16 `yaml:"ListenPort" default:"8080"`
+	ListenPort *uint16 `yaml:"ListenPort,omitempty" default:"8080"`
 }
+
+func (e *EnvNet) Validate() error {
+	listen := uint16(80)
+	if e.ListenPort == nil {
+		e.ListenPort = &listen
+	}
+	return nil
+}
+
 type EnvActivityRedisServerKeyPrefix struct {
 	Application string `yaml:"Application,omitempty" default:"activity_application_"`
 	Applicant   string `yaml:"Applicant,omitempty" default:"activity_applicant_"`
@@ -26,10 +35,18 @@ type EnvActivity struct {
 }
 
 type Env struct {
-	Net          EnvNet                           `yaml:"Net"`
+	Net          *EnvNet                          `yaml:"Net,omitempty"`
 	RedisServers []commonComponent.EnvRedisServer `yaml:"RedisServers"`
 	Activity     EnvActivity                      `yaml:"Activity"`
 	redisClients *[]*redis.Client
+}
+
+func (e *Env) GetEnvDefault() *EnvNet {
+	listen := uint16(80)
+	env := EnvNet{
+		ListenPort: &listen,
+	}
+	return &env
 }
 
 func (e *Env) Validate() error {
@@ -37,6 +54,13 @@ func (e *Env) Validate() error {
 		if err := v.Validate(); err != nil {
 			return err
 		}
+	}
+	if e.Net != nil {
+		if err := e.Net.Validate(); err != nil {
+			return err
+		}
+	} else {
+		e.Net = e.GetEnvDefault()
 	}
 	return nil
 }

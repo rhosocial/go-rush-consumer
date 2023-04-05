@@ -27,7 +27,7 @@ func main() {
 	if !configEngine(r) {
 		return
 	}
-	if err := r.Run(fmt.Sprintf(":%d", component.GlobalEnv.Net.ListenPort)); err != nil {
+	if err := r.Run(fmt.Sprintf(":%d", *(*component.GlobalEnv.Net).ListenPort)); err != nil {
 		println(err.Error())
 		return
 	}
