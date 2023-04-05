@@ -65,7 +65,7 @@ func (e *Env) Validate() error {
 	return nil
 }
 
-var GlobalEnv Env
+var GlobalEnv *Env
 
 func LoadEnvFromYaml(filepath string) error {
 	var env Env
@@ -83,7 +83,7 @@ func LoadEnvFromYaml(filepath string) error {
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(&env.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
-	GlobalEnv = env
+	GlobalEnv = &env
 	return nil
 }
 

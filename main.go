@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,7 @@ import (
 var r *gin.Engine
 
 func main() {
-	println("Hello, World!")
+	log.Println("Hello, World!")
 	if err := component.LoadEnvFromDefaultYaml(); err != nil {
 		println(err.Error())
 		return
@@ -28,8 +29,8 @@ func main() {
 	if !configEngine(r) {
 		return
 	}
-	if err := r.Run(fmt.Sprintf(":%d", *(*component.GlobalEnv.Net).ListenPort)); err != nil {
-		println(err.Error())
+	if err := r.Run(fmt.Sprintf(":%d", *(*(*component.GlobalEnv).Net).ListenPort)); err != nil {
+		log.Println(err.Error())
 		return
 	}
 }

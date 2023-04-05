@@ -117,15 +117,15 @@ type Activity struct {
 }
 
 func (c *Activity) GetRedisServerApplicationKeyName() string {
-	return fmt.Sprintf("%s%d", GlobalEnv.Activity.RedisServer.KeyPrefix.Application, c.ID)
+	return fmt.Sprintf("%s%d", (*GlobalEnv).Activity.RedisServer.KeyPrefix.Application, c.ID)
 }
 
 func (c *Activity) GetRedisServerApplicantKeyName() string {
-	return fmt.Sprintf("%s%d", GlobalEnv.Activity.RedisServer.KeyPrefix.Applicant, c.ID)
+	return fmt.Sprintf("%s%d", (*GlobalEnv).Activity.RedisServer.KeyPrefix.Applicant, c.ID)
 }
 
 func (c *Activity) GetRedisServerSeatKeyName() string {
-	return fmt.Sprintf("%s%d", GlobalEnv.Activity.RedisServer.KeyPrefix.Seat, c.ID)
+	return fmt.Sprintf("%s%d", (*GlobalEnv).Activity.RedisServer.KeyPrefix.Seat, c.ID)
 }
 
 var ErrWorkerHasBeenStopped = errors.New("the worker has already been stopped")
@@ -146,7 +146,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancel(ctx)
 	c.ContextCancelFunc = cancel
-	server := GlobalEnv.RedisServers[*turn]
+	server := (*GlobalEnv).RedisServers[*turn]
 	interval := server.GetWorkerDefault().Interval
 	if server.Worker != nil {
 		interval = server.Worker.Interval
@@ -198,7 +198,7 @@ var currentClient func() *redis.Client
 
 // PopApplicationsFromQueue 从申请队列中取出。
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
-	batch := int(GlobalEnv.Activity.Batch)
+	batch := int((*GlobalEnv).Activity.Batch)
 	client := currentClient()
 	if result := client.LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
