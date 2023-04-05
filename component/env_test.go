@@ -38,12 +38,12 @@ func createTempFiles(t *testing.T) {
 	}
 }
 
-func setup(t *testing.T) {
+func setupEnv(t *testing.T) {
 	createTempDirs(t)
 	createTempFiles(t)
 }
 
-func teardown(t *testing.T) {
+func teardownEnv(t *testing.T) {
 	if yamlEmptyFile != nil {
 		if err := yamlEmptyFile.Close(); err != nil {
 			t.Log(err)
@@ -53,8 +53,8 @@ func teardown(t *testing.T) {
 }
 
 func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
-	setup(t)
-	defer teardown(t)
+	setupEnv(t)
+	defer teardownEnv(t)
 
 	t.Run("Net", func(t *testing.T) {
 		if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err != nil {

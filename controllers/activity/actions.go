@@ -26,7 +26,7 @@ func (a *ControllerActivity) ActionStatus(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity existed", activity.ContextCancelFunc == nil, nil))
+	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity existed", !activity.IsWorking(), nil))
 }
 
 func (a *ControllerActivity) ActionStart(c *gin.Context) {

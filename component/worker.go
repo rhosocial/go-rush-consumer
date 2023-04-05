@@ -2,21 +2,22 @@ package component
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 )
 
+var processFuncDefault = func(ctx context.Context, activityID uint64) {
+	log.Printf("[ActivityID: %d] working (with no action(s))...\n", activityID)
+}
+
 // doneFunc 输出指定 activityID 工作结束日志。
-var doneFunc = func(ctx context.Context, activityID uint64, cause error) {
+var doneFuncDefault = func(ctx context.Context, activityID uint64, cause error) {
 	if cause == nil || cause == ErrWorkerStopped {
 		log.Printf("[ActivityID: %d] worker done.\n", activityID)
 	} else {
 		log.Printf("[ActivityID: %d] worker exited abnormally, because: %s\n", activityID, cause.Error())
 	}
 }
-
-var ErrWorkerProcessNil = errors.New("worker process nil")
 
 var deferredWorkerHandlerFunc = func(activity *Activity) {
 	if activity == nil {
@@ -35,10 +36,10 @@ var deferredWorkerHandlerFunc = func(activity *Activity) {
 // 可以不指定处理结束函数 done。如果不指定，则使用默认函数 doneFunc。
 func worker(ctx context.Context, interval uint16, activityID uint64, process func(context.Context, uint64), done func(context.Context, uint64, error)) {
 	if process == nil {
-		panic(ErrWorkerProcessNil)
+		process = processFuncDefault
 	}
 	if done == nil {
-		done = doneFunc
+		done = doneFuncDefault
 	}
 
 	activity, err := Activities.GetActivity(activityID)

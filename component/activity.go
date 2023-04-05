@@ -91,10 +91,28 @@ func (a *ActivityPool) Remove(id uint64, stopBeforeRemoving bool) error {
 	return nil
 }
 
+// RemoveAll 移除所有活动，并返回成功移除的个数。
+func (a *ActivityPool) RemoveAll() int {
+	a.ActivitiesRWLock.Lock()
+	defer a.ActivitiesRWLock.Unlock()
+	count := 0
+	for _, v := range a.Activities {
+		if v.IsWorking() {
+			if err := v.Stop(ErrActivityToBeRemoved); err == nil {
+				count++
+			} else {
+				log.Println(err)
+			}
+		}
+		delete(a.Activities, v.ID)
+	}
+	return count
+}
+
 func (a *ActivityPool) Status() map[uint64]bool {
 	workings := make(map[uint64]bool)
 	for _, v := range a.Activities {
-		workings[v.ID] = v.ContextCancelFunc != nil
+		workings[v.ID] = v.contextCancelFunc != nil
 	}
 	return workings
 }
@@ -114,8 +132,8 @@ func (a *ActivityPool) StopAll() int {
 // Activity 活动
 type Activity struct {
 	ID                      uint64
-	ContextCancelFuncRWLock sync.RWMutex
-	ContextCancelFunc       context.CancelCauseFunc
+	contextCancelFuncRWLock sync.RWMutex
+	contextCancelFunc       context.CancelCauseFunc
 }
 
 func (c *Activity) GetRedisServerApplicationKeyName() string {
@@ -144,19 +162,19 @@ func (c *Activity) Start(ctx context.Context) error {
 	if turn == nil {
 		panic(commonComponent.ErrRedisClientNil)
 	}
-	c.ContextCancelFuncRWLock.Lock()
-	defer c.ContextCancelFuncRWLock.Unlock()
-	if c.ContextCancelFunc != nil {
+	c.contextCancelFuncRWLock.Lock()
+	defer c.contextCancelFuncRWLock.Unlock()
+	if c.contextCancelFunc != nil {
 		return ErrWorkerIsWorking
 	}
 	ctxChild, cancel := context.WithCancelCause(ctx)
-	c.ContextCancelFunc = cancel
+	c.contextCancelFunc = cancel
 	server := (*GlobalEnv).RedisServers[*turn]
 	interval := server.GetWorkerDefault().Interval
 	if server.Worker != nil {
 		interval = server.Worker.Interval
 	}
-	go worker(ctxChild, interval, c.ID, processFunc, doneFunc)
+	go worker(ctxChild, interval, c.ID, processFunc, nil)
 	return nil
 }
 
@@ -182,21 +200,21 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 // 停止必须指定原因。如果为成功停止，则传入 ErrWorkerStopped。
 // 若指定的活动的工作协程已停止，则会返回 ErrWorkerHasBeenStopped 异常。
 func (c *Activity) Stop(cause error) error {
-	c.ContextCancelFuncRWLock.Lock()
-	defer c.ContextCancelFuncRWLock.Unlock()
-	if c.ContextCancelFunc == nil {
+	c.contextCancelFuncRWLock.Lock()
+	defer c.contextCancelFuncRWLock.Unlock()
+	if c.contextCancelFunc == nil {
 		return ErrWorkerHasBeenStopped
 	}
-	c.ContextCancelFunc(cause)
-	c.ContextCancelFunc = nil
+	c.contextCancelFunc(cause)
+	c.contextCancelFunc = nil
 	return nil
 }
 
 // IsWorking 判断当前活动协程否正在工作中。
 func (c *Activity) IsWorking() bool {
-	c.ContextCancelFuncRWLock.Lock()
-	defer c.ContextCancelFuncRWLock.Unlock()
-	return c.ContextCancelFunc != nil
+	c.contextCancelFuncRWLock.Lock()
+	defer c.contextCancelFuncRWLock.Unlock()
+	return c.contextCancelFunc != nil
 }
 
 // currentClient 指代获取当前有效 Redis 客户端指针的方法。若没有有效的 redis 客户端，则会报错误。
