@@ -1,12 +1,13 @@
 package controllerActivity
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
-	"go-rush-consumer/component"
+	"github.com/rhosocial/go-rush-consumer/component"
 	"golang.org/x/net/context"
-	"net/http"
 )
 
 type ActivityBody struct {

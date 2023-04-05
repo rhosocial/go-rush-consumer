@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
-	"go-rush-consumer/component"
-	controllerActivity "go-rush-consumer/controllers/activity"
-	"go-rush-consumer/controllers/server"
-	"time"
+	"github.com/rhosocial/go-rush-consumer/component"
+	controllerActivity "github.com/rhosocial/go-rush-consumer/controllers/activity"
+	"github.com/rhosocial/go-rush-consumer/controllers/server"
 )
 
 var r *gin.Engine

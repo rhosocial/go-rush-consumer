@@ -2,10 +2,11 @@ package controllerServer
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
-	"go-rush-consumer/component"
-	"net/http"
+	"github.com/rhosocial/go-rush-consumer/component"
 )
 
 type ActionStatusResponseData struct {
