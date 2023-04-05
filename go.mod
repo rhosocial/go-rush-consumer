@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/redis/go-redis/v9 v9.0.3
-	github.com/rhosocial/go-rush-common v0.0.0-20230405083621-c6fbde9a35a4
+	github.com/rhosocial/go-rush-common v0.0.0-20230405154932-e9f49702bf1d
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/net v0.8.0
 	gopkg.in/yaml.v3 v3.0.1

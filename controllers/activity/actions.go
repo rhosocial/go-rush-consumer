@@ -61,7 +61,7 @@ func (a *ControllerActivity) ActionStop(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
-	err = activity.Stop()
+	err = activity.Stop(component.ErrWorkerStopped)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusOK, commonComponent.NewGenericResponse(c, 1, "failed to stop a worker", err.Error(), nil))
 		return

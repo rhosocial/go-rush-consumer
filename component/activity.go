@@ -64,6 +64,8 @@ func (a *ActivityPool) GetActivity(id uint64) (*Activity, error) {
 
 var ErrActivityNotExist = errors.New("activity not exist")
 var ErrActivityExisted = errors.New("activity existed")
+var ErrActivityToBeRemoved = errors.New("activity to be removed")
+var ErrAllWorkersStopped = errors.New("all workers stopped")
 
 // Remove 移除指定活动ID。
 // 若指定ID的活动不存在，则报 ErrActivityNotExist 异常。
@@ -80,7 +82,7 @@ func (a *ActivityPool) Remove(id uint64, stopBeforeRemoving bool) error {
 		if !stopBeforeRemoving {
 			return ErrWorkerIsWorking
 		}
-		err := activity.Stop()
+		err := activity.Stop(ErrActivityToBeRemoved)
 		if err != nil {
 			return err
 		}
@@ -101,7 +103,7 @@ func (a *ActivityPool) Status() map[uint64]bool {
 func (a *ActivityPool) StopAll() int {
 	count := 0
 	for _, v := range a.Activities {
-		err := v.Stop()
+		err := v.Stop(ErrAllWorkersStopped)
 		if err == nil {
 			count++
 		}
@@ -113,7 +115,7 @@ func (a *ActivityPool) StopAll() int {
 type Activity struct {
 	ID                      uint64
 	ContextCancelFuncRWLock sync.RWMutex
-	ContextCancelFunc       context.CancelFunc
+	ContextCancelFunc       context.CancelCauseFunc
 }
 
 func (c *Activity) GetRedisServerApplicationKeyName() string {
@@ -131,6 +133,9 @@ func (c *Activity) GetRedisServerSeatKeyName() string {
 var ErrWorkerHasBeenStopped = errors.New("the worker has already been stopped")
 var ErrWorkerIsWorking = errors.New("the worker is working")
 
+// ErrWorkerStopped 任务成功停止。但停止要提供 errors 类原因，因此该成功状态仍记为异常。
+var ErrWorkerStopped = errors.New("the worker stopped")
+
 // Start 启动一个活动的工作协程。若启动成功，则不会报异常且返回 nil。
 // 若当前无有效 Redis 客户端，则报 ErrRedisClientNil 异常。
 // 若当前活动已经启动了工作协程，则返回 ErrWorkerIsWorking 异常。
@@ -144,7 +149,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	if c.ContextCancelFunc != nil {
 		return ErrWorkerIsWorking
 	}
-	ctxChild, cancel := context.WithCancel(ctx)
+	ctxChild, cancel := context.WithCancelCause(ctx)
 	c.ContextCancelFunc = cancel
 	server := (*GlobalEnv).RedisServers[*turn]
 	interval := server.GetWorkerDefault().Interval
@@ -174,14 +179,15 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 }
 
 // Stop 停止一个活动的工作协程。若停止成功，则返回 nil。
+// 停止必须指定原因。如果为成功停止，则传入 ErrWorkerStopped。
 // 若指定的活动的工作协程已停止，则会返回 ErrWorkerHasBeenStopped 异常。
-func (c *Activity) Stop() error {
+func (c *Activity) Stop(cause error) error {
 	c.ContextCancelFuncRWLock.Lock()
 	defer c.ContextCancelFuncRWLock.Unlock()
 	if c.ContextCancelFunc == nil {
 		return ErrWorkerHasBeenStopped
 	}
-	c.ContextCancelFunc()
+	c.ContextCancelFunc(cause)
 	c.ContextCancelFunc = nil
 	return nil
 }
@@ -193,7 +199,7 @@ func (c *Activity) IsWorking() bool {
 	return c.ContextCancelFunc != nil
 }
 
-// currentClient 指代获取当前有效 Redis 客户端指针的方法。
+// currentClient 指代获取当前有效 Redis 客户端指针的方法。若没有有效的 redis 客户端，则会报错误。
 var currentClient func() *redis.Client
 
 // PopApplicationsFromQueue 从申请队列中取出。
