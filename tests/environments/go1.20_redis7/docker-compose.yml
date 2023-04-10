@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  php:
+    build:
+      context: golang_alpine
+    image: golang:go1.20_redis7
+    working_dir: /opt/project
+    ports:
+      - "8080:80"
+    networks:
+      - dev
+    volumes:
+      - ../../../../go-rush-consumer:/opt/project
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+  redis:
+    image: redis:7
+    ports:
+      - "8379:6379"
+    networks:
+      - dev
+    volumes:
+      - redis_data:/data
+networks:
+  dev:
+volumes:
+  redis_data:
