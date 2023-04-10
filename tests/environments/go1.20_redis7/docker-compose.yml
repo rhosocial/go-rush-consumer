@@ -1,8 +1,9 @@
 version: "3.8"
 services:
-  php:
+  go:
     build:
-      context: golang_alpine
+      context: ../../..
+      dockerfile: tests/environments/go1.20_redis7/golang_alpine/Dockerfile
     image: golang:go1.20_redis7
     working_dir: /opt/project
     ports:

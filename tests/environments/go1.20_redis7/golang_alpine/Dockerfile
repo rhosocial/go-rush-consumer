@@ -4,6 +4,12 @@ ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux
 
+RUN apk add --no-cache git
+
 WORKDIR /opt/project
 
-RUN go mod tidy && go mod tidy && go build -v ./...
+COPY component ./component
+COPY controllers ./controllers
+COPY go.mod go.sum main.go ./
+
+RUN go mod tidy && go build -v ./...
