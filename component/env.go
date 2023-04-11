@@ -1,10 +1,13 @@
 package component
 
 import (
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/redis/go-redis/v9"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 type EnvNet struct {
@@ -89,4 +92,18 @@ func LoadEnvFromYaml(filepath string) error {
 
 func LoadEnvFromDefaultYaml() error {
 	return LoadEnvFromYaml("default.yaml")
+}
+
+func LoadEnvFromSystemEnvVar() error {
+	var env Env
+	env.Validate()
+	if GlobalEnv == nil {
+		GlobalEnv = &env
+	}
+	if value, exist := os.LookupEnv("Net.ListenPort"); exist {
+		log.Println("Net.ListenPort: ", value)
+		ListenPort, _ := strconv.ParseUint(value, 10, 16)
+		*(*env.Net).ListenPort = uint16(ListenPort)
+	}
+	return nil
 }

@@ -16,7 +16,13 @@ var r *gin.Engine
 
 func main() {
 	log.Println("Hello, World!")
+
+	// 先从文件中加载配置信息。
 	if err := component.LoadEnvFromDefaultYaml(); err != nil {
+		println(err.Error())
+	}
+	// 再从环境变量中加载配置信息。
+	if err := component.LoadEnvFromSystemEnvVar(); err != nil {
 		println(err.Error())
 		return
 	}
