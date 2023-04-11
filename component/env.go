@@ -52,6 +52,7 @@ func (e *Env) GetEnvDefault() *EnvNet {
 	return &env
 }
 
+// Validate 验证并加载默认值。
 func (e *Env) Validate() error {
 	for _, v := range e.RedisServers {
 		if err := v.Validate(); err != nil {
@@ -96,7 +97,10 @@ func LoadEnvFromDefaultYaml() error {
 
 func LoadEnvFromSystemEnvVar() error {
 	var env Env
-	env.Validate()
+	err := env.Validate()
+	if err != nil {
+		return err
+	}
 	if GlobalEnv == nil {
 		GlobalEnv = &env
 	}
