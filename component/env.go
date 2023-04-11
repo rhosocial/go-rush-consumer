@@ -79,9 +79,9 @@ type Env struct {
 }
 
 // GetNetDefault 取得 EnvNet 的默认值。
-// EnvNet.ListenPort 默认值为 80。
+// EnvNet.ListenPort 默认值为 8080。
 func (e *Env) GetNetDefault() *EnvNet {
-	listen := uint16(80)
+	listen := uint16(8080)
 	net := EnvNet{
 		ListenPort: &listen,
 	}
@@ -134,23 +134,36 @@ func (e *Env) Validate() error {
 
 var GlobalEnv *Env
 
+// LoadEnvDefault 加载配置参数默认值。
+func LoadEnvDefault() error {
+	if GlobalEnv == nil {
+		var env Env
+		env.Validate()
+		GlobalEnv = &env
+	}
+	return nil
+}
+
 func LoadEnvFromYaml(filepath string) error {
-	var env Env
 	file, err := os.ReadFile(filepath)
 	if err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(file, &env); err != nil {
+	if GlobalEnv == nil {
+		var env Env
+		env.Validate()
+		GlobalEnv = &env
+	}
+	if err := yaml.Unmarshal(file, GlobalEnv); err != nil {
 		return nil
 	}
-	if err := env.Validate(); err != nil {
+	if err := GlobalEnv.Validate(); err != nil {
 		return err
 	}
 
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
-	commonComponent.GlobalRedisClientPool.InitRedisClientPool(env.RedisServers)
+	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
-	GlobalEnv = &env
 	return nil
 }
 
@@ -159,18 +172,20 @@ func LoadEnvFromDefaultYaml() error {
 }
 
 func LoadEnvFromSystemEnvVar() error {
-	var env Env
-	err := env.Validate()
-	if err != nil {
-		return err
-	}
 	if GlobalEnv == nil {
+		var env Env
+		env.Validate()
 		GlobalEnv = &env
 	}
 	if value, exist := os.LookupEnv("Net.ListenPort"); exist {
 		log.Println("Net.ListenPort: ", value)
-		ListenPort, _ := strconv.ParseUint(value, 10, 16)
-		*(*env.Net).ListenPort = uint16(ListenPort)
+		port, _ := strconv.ParseUint(value, 10, 16)
+		*(*GlobalEnv.Net).ListenPort = uint16(port)
+	}
+	if value, exist := os.LookupEnv("Activity.Batch"); exist {
+		log.Println("Activity.Batch: ", value)
+		batch, _ := strconv.ParseUint(value, 10, 8)
+		*(*GlobalEnv.Activity).Batch = uint8(batch)
 	}
 	return nil
 }

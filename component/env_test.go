@@ -63,6 +63,6 @@ func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
 		}
 		assert.NotNil(t, (*GlobalEnv).Net, "The `Net` attribute of `GlobalEnv` should not be `nil`.")
 		assert.NotNil(t, (*(*GlobalEnv).Net).ListenPort, "The `ListenPort` attribute of `Net` should not be `nil`.")
-		assert.Equal(t, uint16(80), *(*(*GlobalEnv).Net).ListenPort, "The default port is `80` when not defined.")
+		assert.Equal(t, uint16(8080), *(*(*GlobalEnv).Net).ListenPort, "The default port is `8080` when not defined.")
 	})
 }

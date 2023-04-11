@@ -17,6 +17,9 @@ var r *gin.Engine
 func main() {
 	log.Println("Hello, World!")
 
+	// 最初初始化所有配置参数为默认值。
+	component.LoadEnvDefault()
+
 	// 先从文件中加载配置信息。
 	if err := component.LoadEnvFromDefaultYaml(); err != nil {
 		println(err.Error())
@@ -24,8 +27,8 @@ func main() {
 	// 再从环境变量中加载配置信息。
 	if err := component.LoadEnvFromSystemEnvVar(); err != nil {
 		println(err.Error())
-		return
 	}
+	// 都加载错误则使用默认值。
 	component.Activities = component.InitActivityPool()
 	if err := initExamples(); err != nil {
 		println(err.Error())
