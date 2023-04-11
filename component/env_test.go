@@ -53,13 +53,25 @@ func teardownEnvFiles(t *testing.T) {
 }
 
 func setupEnvVars(t *testing.T) {
-	os.Setenv("Net.ListenPort", "8081")
-	os.Setenv("Activity.Batch", "127")
+	if err := os.Setenv("Net.ListenPort", "8081"); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := os.Setenv("Activity.Batch", "127"); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func teardownEnvVars(t *testing.T) {
-	os.Unsetenv("Net.ListenPort")
-	os.Unsetenv("Activity.Batch")
+	if err := os.Unsetenv("Net.ListenPort"); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := os.Unsetenv("Activity.Batch"); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
@@ -98,8 +110,16 @@ func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
 func TestLoadEnvFromYaml_WrongContent(t *testing.T) {
 	setupEnvFiles(t)
 	defer teardownEnvFiles(t)
-	yamlEmptyFile.WriteString("wrong content")
-	yamlEmptyFile.Seek(0, 0)
+	_, err := yamlEmptyFile.WriteString("wrong content")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_, err = yamlEmptyFile.Seek(0, 0)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err == nil {
 		t.Error("Error(s) should be occurred.")
