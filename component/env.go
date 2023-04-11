@@ -81,10 +81,8 @@ type Env struct {
 // GetNetDefault 取得 EnvNet 的默认值。
 // EnvNet.ListenPort 默认值为 8080。
 func (e *Env) GetNetDefault() *EnvNet {
-	listen := uint16(8080)
-	net := EnvNet{
-		ListenPort: &listen,
-	}
+	net := EnvNet{}
+	net.ListenPort = net.GetListenPortDefault()
 	return &net
 }
 
@@ -161,7 +159,7 @@ func LoadEnvFromYaml(filepath string) error {
 		GlobalEnv = &env
 	}
 	if err := yaml.Unmarshal(file, GlobalEnv); err != nil {
-		return nil
+		return err
 	}
 	if err := GlobalEnv.Validate(); err != nil {
 		return err
@@ -171,10 +169,6 @@ func LoadEnvFromYaml(filepath string) error {
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
 	return nil
-}
-
-func LoadEnvFromDefaultYaml() error {
-	return LoadEnvFromYaml("default.yaml")
 }
 
 func LoadEnvFromSystemEnvVar() error {

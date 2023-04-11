@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	yamlEmpty     = "yamlEmpty*.yaml"
+	yamlEmpty     = "default.yaml"
 	yamlEmptyFile *os.File
 	yamlEmptyDir  string
 )
@@ -38,12 +38,12 @@ func createTempFiles(t *testing.T) {
 	}
 }
 
-func setupEnv(t *testing.T) {
+func setupEnvFiles(t *testing.T) {
 	createTempDirs(t)
 	createTempFiles(t)
 }
 
-func teardownEnv(t *testing.T) {
+func teardownEnvFiles(t *testing.T) {
 	if yamlEmptyFile != nil {
 		if err := yamlEmptyFile.Close(); err != nil {
 			t.Log(err)
@@ -52,9 +52,19 @@ func teardownEnv(t *testing.T) {
 	removeTempDirs(t)
 }
 
+func setupEnvVars(t *testing.T) {
+	os.Setenv("Net.ListenPort", "8081")
+	os.Setenv("Activity.Batch", "127")
+}
+
+func teardownEnvVars(t *testing.T) {
+	os.Unsetenv("Net.ListenPort")
+	os.Unsetenv("Activity.Batch")
+}
+
 func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
-	setupEnv(t)
-	defer teardownEnv(t)
+	setupEnvFiles(t)
+	defer teardownEnvFiles(t)
 
 	t.Run("Net", func(t *testing.T) {
 		if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err != nil {
@@ -65,4 +75,63 @@ func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
 		assert.NotNil(t, (*(*GlobalEnv).Net).ListenPort, "The `ListenPort` attribute of `Net` should not be `nil`.")
 		assert.Equal(t, uint16(8080), *(*(*GlobalEnv).Net).ListenPort, "The default port is `8080` when not defined.")
 	})
+
+	t.Run("RedisServer", func(t *testing.T) {
+		if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err != nil {
+			t.Error(err)
+			return
+		}
+		assert.NotNil(t, (*GlobalEnv).RedisServers, "The `RedisServer` attribute of `GlobalEnv` should not be `nil`.")
+		assert.Len(t, *(*GlobalEnv).RedisServers, 0, "The length of `RedisServer` should be zero.")
+	})
+
+	t.Run("Activity", func(t *testing.T) {
+		if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err != nil {
+			t.Error(err)
+			return
+		}
+		assert.NotNil(t, (*GlobalEnv).Activity, "The `Activity` attribute of `GlobalEnv` should not be `nil`.")
+		assert.Equal(t, uint8(100), *(*(*GlobalEnv).Activity).Batch, "The default batch is `100` when not defined.")
+	})
+}
+
+func TestLoadEnvFromYaml_WrongContent(t *testing.T) {
+	setupEnvFiles(t)
+	defer teardownEnvFiles(t)
+	yamlEmptyFile.WriteString("wrong content")
+	yamlEmptyFile.Seek(0, 0)
+
+	if err := LoadEnvFromYaml(yamlEmptyFile.Name()); err == nil {
+		t.Error("Error(s) should be occurred.")
+		return
+	}
+}
+
+func TestLoadEnvFromSystemEnvVar(t *testing.T) {
+	if err := LoadEnvFromSystemEnvVar(); err != nil {
+		t.Error(err)
+		return
+	}
+	assert.Equal(t, uint16(8080), *(*(*GlobalEnv).Net).ListenPort)
+	assert.Equal(t, uint8(100), *(*(*GlobalEnv).Activity).Batch)
+
+	_, exist := os.LookupEnv("Net.ListenPort")
+	assert.False(t, exist)
+	_, exist = os.LookupEnv("Activity.Batch")
+	assert.False(t, exist)
+	setupEnvVars(t)
+	defer teardownEnvVars(t)
+	port, exist := os.LookupEnv("Net.ListenPort")
+	assert.True(t, exist)
+	assert.Equal(t, "8081", port)
+	batch, exist := os.LookupEnv("Activity.Batch")
+	assert.True(t, exist)
+	assert.Equal(t, "127", batch)
+
+	if err := LoadEnvFromSystemEnvVar(); err != nil {
+		t.Error(err)
+		return
+	}
+	assert.Equal(t, uint16(8081), *(*(*GlobalEnv).Net).ListenPort)
+	assert.Equal(t, uint8(127), *(*(*GlobalEnv).Activity).Batch)
 }

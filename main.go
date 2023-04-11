@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// 先从文件中加载配置信息。
-	if err := component.LoadEnvFromDefaultYaml(); err != nil {
+	if err := component.LoadEnvFromYaml("default.yaml"); err != nil {
 		println(err.Error())
 	}
 	// 再从环境变量中加载配置信息。

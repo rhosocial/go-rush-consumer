@@ -7,7 +7,7 @@ services:
     image: golang:go1.20_redis7
     working_dir: /opt/project
     ports:
-      - "8080:80"
+      - "8080:8080"
     networks:
       - dev
     volumes:
