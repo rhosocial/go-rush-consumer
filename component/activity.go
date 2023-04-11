@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"log"
 	"math"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
+	commonComponent "github.com/rhosocial/go-rush-common/component"
 )
 
 var Activities *ActivityPool
@@ -169,7 +170,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancelCause(ctx)
 	c.contextCancelFunc = cancel
-	server := (*GlobalEnv).RedisServers[*turn]
+	server := (*(*GlobalEnv).RedisServers)[*turn]
 	interval := server.GetWorkerDefault().Interval
 	if server.Worker != nil {
 		interval = server.Worker.Interval
@@ -214,7 +215,7 @@ var processFunc2 = func(ctx context.Context, activityID uint64) {
 	}
 	txf := func(tx *redis.Tx) error {
 		// 取得一批的最大值。该值不推荐设太大，否则在高频存取时，可能会因乐观锁频繁失效而无法成功执行。
-		batch := int((*GlobalEnv).Activity.Batch)
+		batch := int(*(*(*GlobalEnv).Activity).Batch)
 		if result := tx.LLen(ctx, activity.GetRedisServerApplicationKeyName()); result.Err() != nil {
 			return result.Err()
 		} else {
@@ -303,7 +304,7 @@ var currentClient func() *redis.Client
 
 // PopApplicationsFromQueue 从申请队列中取出。
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
-	batch := int((*GlobalEnv).Activity.Batch)
+	batch := int(*(*(*GlobalEnv).Activity).Batch)
 	client := currentClient()
 	if result := client.LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
