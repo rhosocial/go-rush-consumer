@@ -138,7 +138,10 @@ var GlobalEnv *Env
 func LoadEnvDefault() error {
 	if GlobalEnv == nil {
 		var env Env
-		env.Validate()
+		err := env.Validate()
+		if err != nil {
+			return err
+		}
 		GlobalEnv = &env
 	}
 	return nil
@@ -151,7 +154,10 @@ func LoadEnvFromYaml(filepath string) error {
 	}
 	if GlobalEnv == nil {
 		var env Env
-		env.Validate()
+		err := env.Validate()
+		if err != nil {
+			return err
+		}
 		GlobalEnv = &env
 	}
 	if err := yaml.Unmarshal(file, GlobalEnv); err != nil {
@@ -174,7 +180,10 @@ func LoadEnvFromDefaultYaml() error {
 func LoadEnvFromSystemEnvVar() error {
 	if GlobalEnv == nil {
 		var env Env
-		env.Validate()
+		err := env.Validate()
+		if err != nil {
+			return err
+		}
 		GlobalEnv = &env
 	}
 	if value, exist := os.LookupEnv("Net.ListenPort"); exist {

@@ -18,7 +18,11 @@ func main() {
 	log.Println("Hello, World!")
 
 	// 最初初始化所有配置参数为默认值。
-	component.LoadEnvDefault()
+	err := component.LoadEnvDefault()
+	if err != nil {
+		println(err.Error())
+		return
+	}
 
 	// 先从文件中加载配置信息。
 	if err := component.LoadEnvFromDefaultYaml(); err != nil {
