@@ -2,6 +2,7 @@ package controllerActivity
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -90,14 +91,22 @@ type ActivityBodyDelete struct {
 }
 
 func (a *ControllerActivity) ActionDelete(c *gin.Context) {
-	var body ActivityBodyDelete
-	err := c.ShouldBindWith(&body, binding.FormPost)
+	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
+	println(c.Param("activityID"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	err = component.Activities.Remove(body.ActivityID, body.StopBeforeRemoving)
+	println(c.Param("stopBeforeRemoving"))
+	stopBeforeRemoving, err := strconv.ParseBool(c.Param("stopBeforeRemoving"))
 	if err != nil {
+		stopBeforeRemoving = false
+	}
+	err = component.Activities.Remove(activityID, stopBeforeRemoving)
+	if err == component.ErrActivityNotExist {
+		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		return
+	} else if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "failed to remove the activity", err.Error(), nil))
 		return
 	}
@@ -117,7 +126,8 @@ func (c *ControllerActivity) RegisterActions(r *gin.Engine) {
 	controller := r.Group("/activity")
 	{
 		controller.PUT("", c.ActionAdd)
-		controller.POST("/delete", c.ActionDelete)
+		controller.DELETE("/:activityID", c.ActionDelete)
+		controller.DELETE("/:activityID/:stopBeforeRemoving", c.ActionDelete)
 		controller.GET("", c.ActionStatus)
 		controller.POST("/start", c.ActionStart)
 		controller.POST("/stop", c.ActionStop)

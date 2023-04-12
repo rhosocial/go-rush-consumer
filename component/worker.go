@@ -10,7 +10,8 @@ var processFuncDefault = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working (with no action(s))...\n", activityID)
 }
 
-// doneFunc 输出指定 activityID 工作结束日志。
+// 默认结束后方法输出指定 activityID 工作结束日志。
+// 建议：停止原因 cause 传入 nil 或 ErrWorkerStopped 都视为正常停止。
 var doneFuncDefault = func(ctx context.Context, activityID uint64, cause error) {
 	if cause == nil || cause == ErrWorkerStopped {
 		log.Printf("[ActivityID: %d] worker done.\n", activityID)
@@ -19,6 +20,9 @@ var doneFuncDefault = func(ctx context.Context, activityID uint64, cause error) 
 	}
 }
 
+// 异常结束后句柄。
+// 如果为 activity 不存在，则恢复最近的错误继续向上传递。
+// 除此之外，如果有错误，则停止活动工作协程。
 var deferredWorkerHandlerFunc = func(activity *Activity) {
 	if activity == nil {
 		log.Println(recover())
