@@ -32,8 +32,8 @@ var deferredWorkerHandlerFunc = func(activity *Activity) {
 
 // worker 处理活动。
 // 指定 activityID 的活动必须存在，否则将报错。
-// 必须指定处理函数 process。
-// 可以不指定处理结束函数 done。如果不指定，则使用默认函数 doneFunc。
+// process 为处理方法，可以为 nil。如果为 nil，则采用 processFuncDefault。
+// done 为处理结束后方法，可以为 nil。如果为 nil，则采用 doneFuncDefault。
 func worker(ctx context.Context, interval uint16, activityID uint64, process func(context.Context, uint64), done func(context.Context, uint64, error)) {
 	if process == nil {
 		process = processFuncDefault
