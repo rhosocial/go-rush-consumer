@@ -175,7 +175,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	if server.Worker != nil {
 		interval = server.Worker.Interval
 	}
-	go worker(ctxChild, interval, c.ID, processFunc2, nil)
+	go worker(ctxChild, interval, c.ID, processFunc3, nil)
 	return nil
 }
 
@@ -269,13 +269,15 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 	if err != nil {
 		panic(err)
 	}
-	var process = redis.NewScript(`
-
-`)
-
-	process.Run(ctx, currentClient(), []string{
-		activity.GetRedisServerApplicantKeyName(), activity.GetRedisServerSeatKeyName(), activity.GetRedisServerApplicationKeyName(),
-	})
+	if val, err := currentClient().FCall(ctx, "pop_applications_and_push_into_seats", []string{
+		activity.GetRedisServerApplicationKeyName(),
+		activity.GetRedisServerApplicantKeyName(),
+		activity.GetRedisServerSeatKeyName(),
+	}, *(*(*GlobalEnv).Activity).Batch).Result(); err == nil {
+		log.Printf("[ActivityID: %d]: %d seat(s) confirmed.\n", activityID, val.(int64))
+	} else {
+		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
+	}
 }
 
 // Stop 停止一个活动的工作协程。若停止成功，则返回 nil。
