@@ -15,24 +15,38 @@ local function push_applicant_into_seats(key, applicant)
 end
 
 local function pop_applications_and_push_into_seats(keys, args)
+    -- Parameters
+    -- Parameters are not verified here, considering performance factors.
     local application_key = keys[1]
     local applicant_key = keys[2]
     local seats_key = keys[3]
     local batch = args[1]
-    -- 为了保证性能，这里不校验参数。
+
     local applications = redis.call("LPOP", application_key, batch)
+    -- Return: total application, newly confirmed, application(s) skipped, applicant(s) missing.
     if applications == false then
-        return 0
+        return {0, 0, 0, 0}
     end
 
-    local count = 0
+    -- Internal variables
+    local newly_confirmed = 0
+    local applicants_missing = 0
+    local applications_skipped = 0
+
     for i=1,#applications do
         if check_applicant_exists_by_application(applicant_key, applications[i]) == 1 then
             local applicant = get_applicant_by_application(applicant_key, applications[i])
-            count = count + push_applicant_into_seats(seats_key, applicant)
+            local count = push_applicant_into_seats(seats_key, applicant)
+            if count == 1 then
+                newly_confirmed = newly_confirmed + 1
+            else
+                applications_skipped = applications_skipped + 1
+            end
+        else
+            applicants_missing = applicants_missing + 1
         end
     end
-    return count
+    return {#applications, newly_confirmed, applications_skipped, applicants_missing}
 end
 
 redis.register_function('pop_applications_and_push_into_seats', pop_applications_and_push_into_seats)

@@ -273,8 +273,9 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 		activity.GetRedisServerApplicationKeyName(),
 		activity.GetRedisServerApplicantKeyName(),
 		activity.GetRedisServerSeatKeyName(),
-	}, *(*(*GlobalEnv).Activity).Batch).Result(); err == nil {
-		log.Printf("[ActivityID: %d]: %d seat(s) confirmed.\n", activityID, val.(int64))
+	}, *(*(*GlobalEnv).Activity).Batch).Uint64Slice(); err == nil {
+		log.Printf("[ActivityID: %d]: %d application(s): %d seat(s) newly confirmed, %d skipped, %d applicant(s) missing.\n",
+			activityID, val[0], val[1], val[2], val[3])
 	} else {
 		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
 	}
