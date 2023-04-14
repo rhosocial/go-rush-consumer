@@ -169,6 +169,11 @@ func LoadEnvFromYaml(filepath string) error {
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
+	defer func() {
+		if err := recover(); err == commonComponent.ErrRedisClientNil || err == commonComponent.ErrRedisClientsNotAvailable {
+			log.Println(err)
+		}
+	}()
 	if currentClient() != nil {
 		contents, err := os.ReadFile("component/go-rush-consumer.lua")
 		if err != nil {

@@ -30,6 +30,11 @@ func (a *ControllerActivity) ActionStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity existed", !activity.IsWorking(), nil))
 }
 
+type ActivityBodyAdd struct {
+	ActivityBody
+	RedisServerIndex *uint8 `form:"redis_server_index" json:"redis_server_index" default:"0"` // 指针表示可以不提供，不提供时按默认值default。
+}
+
 func (a *ControllerActivity) ActionStart(c *gin.Context) {
 	var body ActivityBody
 	err := c.ShouldBindWith(&body, binding.FormPost)
@@ -71,7 +76,7 @@ func (a *ControllerActivity) ActionStop(c *gin.Context) {
 }
 
 func (a *ControllerActivity) ActionAdd(c *gin.Context) {
-	var body ActivityBody
+	var body ActivityBodyAdd
 	err := c.ShouldBindWith(&body, binding.FormPost)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
