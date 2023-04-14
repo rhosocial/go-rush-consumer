@@ -25,7 +25,7 @@ func setupWorkerActivity(t *testing.T, activityID uint64) {
 	if Activities == nil {
 		t.Error("Activity Pool should not be nil.")
 	}
-	err := Activities.New(activityID)
+	err := Activities.New(activityID, nil)
 	if err != nil {
 		t.Error("It should not report error when the new activity being inserted.")
 	}
