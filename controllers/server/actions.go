@@ -3,10 +3,11 @@ package controllerServer
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"github.com/rhosocial/go-rush-consumer/component"
-	"net/http"
 )
 
 type ActionStatusResponseData struct {
@@ -45,6 +46,14 @@ func (a *ControllerServer) ActionStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "Activities existed", data, nil))
 }
 
+func (a *ControllerServer) ActionRedisServerFunctionLoadReplace(c *gin.Context) {
+	code, _ := c.FormFile("code")
+	content, _ := code.Open()
+	buf := make([]byte, code.Size)
+	content.Read(buf)
+	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, fmt.Sprintf("%d byte(s) uploaded", code.Size), nil, nil))
+}
+
 type ControllerServer struct {
 	commonComponent.GenericController
 }
@@ -53,5 +62,12 @@ func (a *ControllerServer) RegisterActions(r *gin.Engine) {
 	controller := r.Group("/server")
 	{
 		controller.GET("", a.ActionStatus)
+		controllerRedis := controller.Group("/redis")
+		{
+			controllerRedisFunction := controllerRedis.Group("/function")
+			{
+				controllerRedisFunction.POST("/load_replace", a.ActionRedisServerFunctionLoadReplace)
+			}
+		}
 	}
 }
