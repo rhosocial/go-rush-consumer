@@ -115,12 +115,20 @@ func (a *ActivityPool) RemoveAll() int {
 	return count
 }
 
-func (a *ActivityPool) Status() map[uint64]bool {
-	workings := make(map[uint64]bool)
+type ActivityStatus struct {
+	IsWorking        bool  `json:"is_working"`
+	RedisServerIndex uint8 `json:"redis_server_index"`
+}
+
+func (a *ActivityPool) Status() map[uint64]ActivityStatus {
+	status := make(map[uint64]ActivityStatus)
 	for _, v := range a.Activities {
-		workings[v.ID] = v.contextCancelFunc != nil
+		status[v.ID] = ActivityStatus{
+			IsWorking:        v.IsWorking(),
+			RedisServerIndex: v.RedisServerIndex,
+		}
 	}
-	return workings
+	return status
 }
 
 // StopAll 停止所用活动的工作协程。返回成功停止的活动数。

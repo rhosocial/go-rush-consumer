@@ -67,7 +67,8 @@ func configEngine(r *gin.Engine) bool {
 		gin.Recovery(),
 		commonComponent.ErrorHandler(),
 	)
-	r.GET("/status", controllerServer.ActionStatus)
+	var cs controllerServer.ControllerServer
+	cs.RegisterActions(r)
 	var ca controllerActivity.ControllerActivity
 	ca.RegisterActions(r)
 	return true

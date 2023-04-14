@@ -16,15 +16,14 @@ type ActivityBody struct {
 }
 
 func (a *ControllerActivity) ActionStatus(c *gin.Context) {
-	var body ActivityBody
-	err := c.ShouldBindQuery(&body)
+	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", nil, nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	activity, err := component.Activities.GetActivity(body.ActivityID)
+	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
 	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity existed", !activity.IsWorking(), nil))
@@ -36,15 +35,14 @@ type ActivityBodyAdd struct {
 }
 
 func (a *ControllerActivity) ActionStart(c *gin.Context) {
-	var body ActivityBody
-	err := c.ShouldBindWith(&body, binding.FormPost)
+	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", nil, nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	activity, err := component.Activities.GetActivity(body.ActivityID)
+	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
 	err = activity.Start(context.Background())
@@ -56,15 +54,14 @@ func (a *ControllerActivity) ActionStart(c *gin.Context) {
 }
 
 func (a *ControllerActivity) ActionStop(c *gin.Context) {
-	var body ActivityBody
-	err := c.ShouldBindWith(&body, binding.FormPost)
+	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", nil, nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	activity, err := component.Activities.GetActivity(body.ActivityID)
+	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
 	err = activity.Stop(component.ErrWorkerStopped)
@@ -97,12 +94,10 @@ type ActivityBodyDelete struct {
 
 func (a *ControllerActivity) ActionDelete(c *gin.Context) {
 	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
-	println(c.Param("activityID"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	println(c.Param("stopBeforeRemoving"))
 	stopBeforeRemoving, err := strconv.ParseBool(c.Param("stopBeforeRemoving"))
 	if err != nil {
 		stopBeforeRemoving = false
@@ -127,15 +122,15 @@ type ControllerActivity struct {
 	commonComponent.GenericController
 }
 
-func (c *ControllerActivity) RegisterActions(r *gin.Engine) {
+func (a *ControllerActivity) RegisterActions(r *gin.Engine) {
 	controller := r.Group("/activity")
 	{
-		controller.PUT("", c.ActionAdd)
-		controller.DELETE("/:activityID", c.ActionDelete)
-		controller.DELETE("/:activityID/:stopBeforeRemoving", c.ActionDelete)
-		controller.GET("", c.ActionStatus)
-		controller.POST("/start", c.ActionStart)
-		controller.POST("/stop", c.ActionStop)
-		controller.POST("/stop-all", c.ActionStopAll)
+		controller.PUT("", a.ActionAdd)
+		controller.DELETE("/:activityID", a.ActionDelete)
+		controller.DELETE("/:activityID/:stopBeforeRemoving", a.ActionDelete)
+		controller.GET("/:activityID", a.ActionStatus)
+		controller.POST("/:activityID/start", a.ActionStart)
+		controller.POST("/:activityID/stop", a.ActionStop)
+		controller.POST("/stop-all", a.ActionStopAll)
 	}
 }
