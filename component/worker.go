@@ -13,8 +13,12 @@ var processFuncDefault = func(ctx context.Context, activityID uint64) {
 // 默认结束后方法输出指定 activityID 工作结束日志。
 // 建议：停止原因 cause 传入 nil 或 ErrWorkerStopped 都视为正常停止。
 var doneFuncDefault = func(ctx context.Context, activityID uint64, cause error) {
-	if cause == nil || cause == ErrWorkerStopped {
-		log.Printf("[ActivityID: %d] worker done.\n", activityID)
+	if cause == nil || cause == ErrWorkerStopped || cause == ErrAllWorkersStopped {
+		because := "<no reason>"
+		if cause != nil {
+			because = cause.Error()
+		}
+		log.Printf("[ActivityID: %d] worker done, because: %s\n", activityID, because)
 	} else {
 		log.Printf("[ActivityID: %d] worker exited abnormally, because: %s\n", activityID, cause.Error())
 	}

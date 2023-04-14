@@ -82,7 +82,7 @@ func (a *ControllerActivity) ActionAdd(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
-	err = component.Activities.New(body.ActivityID)
+	err = component.Activities.New(body.ActivityID, body.RedisServerIndex)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "failed to add new activity", err.Error(), nil))
 		return

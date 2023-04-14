@@ -40,14 +40,19 @@ func (a *ActivityPool) Capacity() int {
 
 // New 新增一个活动。需要指定活动ID。
 // id 活动ID。新增的活动ID不能与已存在的ID相同，否则会报 ErrActivityExisted 异常。
-func (a *ActivityPool) New(id uint64) error {
+func (a *ActivityPool) New(id uint64, index *uint8) error {
 	a.ActivitiesRWLock.Lock()
 	defer a.ActivitiesRWLock.Unlock()
 	if _, existed := a.Activities[id]; existed {
 		return ErrActivityExisted
 	}
+	index0 := uint8(0)
+	if index != nil {
+		index0 = *index
+	}
 	a.Activities[id] = &Activity{
-		ID: id,
+		ID:               id,
+		RedisServerIndex: index0,
 	}
 	return nil
 }
@@ -133,6 +138,7 @@ func (a *ActivityPool) StopAll() int {
 // Activity 活动
 type Activity struct {
 	ID                      uint64
+	RedisServerIndex        uint8
 	contextCancelFuncRWLock sync.RWMutex
 	contextCancelFunc       context.CancelCauseFunc
 }
@@ -186,7 +192,7 @@ func (c *Activity) Start(ctx context.Context) error {
 var processFunc = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
-	// 活动必须要存在。
+	// 活动必须存在。
 	if err != nil {
 		panic(err)
 	}
@@ -210,6 +216,7 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 var processFunc2 = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
+	client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 	if err != nil {
 		panic(err)
 	}
@@ -237,8 +244,8 @@ var processFunc2 = func(ctx context.Context, activityID uint64) {
 					continue
 				}
 				// 取得“申请人”。
-				applicantResult := currentClient().HGet(ctx, activity.GetRedisServerApplicantKeyName(), application)
-				if result := currentClient().ZAddNX(ctx, activity.GetRedisServerSeatKeyName(), redis.Z{
+				applicantResult := client.HGet(ctx, activity.GetRedisServerApplicantKeyName(), application)
+				if result := client.ZAddNX(ctx, activity.GetRedisServerSeatKeyName(), redis.Z{
 					Score:  float64(time.Now().UnixMicro()),
 					Member: applicantResult.Val(),
 				}); result.Err() == nil {
@@ -252,7 +259,7 @@ var processFunc2 = func(ctx context.Context, activityID uint64) {
 		log.Printf("[ActivityID: %d] Results: %s", activityID, output)
 		return nil
 	}
-	if err := currentClient().Watch(ctx, txf, activity.GetRedisServerApplicantKeyName(), activity.GetRedisServerSeatKeyName(), activity.GetRedisServerApplicationKeyName()); err == redis.TxFailedErr {
+	if err := client.Watch(ctx, txf, activity.GetRedisServerApplicantKeyName(), activity.GetRedisServerSeatKeyName(), activity.GetRedisServerApplicationKeyName()); err == redis.TxFailedErr {
 		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
 	} else if err != nil {
 		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
@@ -266,10 +273,11 @@ var processFunc2 = func(ctx context.Context, activityID uint64) {
 var processFunc3 = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
+	client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 	if err != nil {
 		panic(err)
 	}
-	if val, err := currentClient().FCall(ctx, "pop_applications_and_push_into_seats", []string{
+	if val, err := client.FCall(ctx, "pop_applications_and_push_into_seats", []string{
 		activity.GetRedisServerApplicationKeyName(),
 		activity.GetRedisServerApplicantKeyName(),
 		activity.GetRedisServerSeatKeyName(),
@@ -278,6 +286,7 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 			activityID, val[0], val[1], val[2], val[3])
 	} else {
 		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
+		panic(err)
 	}
 }
 
@@ -297,18 +306,15 @@ func (c *Activity) Stop(cause error) error {
 
 // IsWorking 判断当前活动协程否正在工作中。
 func (c *Activity) IsWorking() bool {
-	c.contextCancelFuncRWLock.Lock()
-	defer c.contextCancelFuncRWLock.Unlock()
+	c.contextCancelFuncRWLock.RLock()
+	defer c.contextCancelFuncRWLock.RUnlock()
 	return c.contextCancelFunc != nil
 }
-
-// currentClient 指代获取当前有效 Redis 客户端指针的方法。若没有有效的 redis 客户端，则会报错误。
-var currentClient func() *redis.Client
 
 // PopApplicationsFromQueue 从申请队列中取出。
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
 	batch := int(*(*(*GlobalEnv).Activity).Batch)
-	client := currentClient()
+	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	if result := client.LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
 	} else {
@@ -325,12 +331,13 @@ func (c *Activity) PushApplicationsIntoSeatQueue(ctx context.Context, applicatio
 		return 0
 	}
 	count := int64(0)
+	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	for _, value := range applications {
 		if !c.ApplicationExists(ctx, value) {
 			continue
 		}
 		tm := time.Now().UnixMicro()
-		result := currentClient().ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
+		result := client.ZAddNX(ctx, c.GetRedisServerSeatKeyName(), redis.Z{
 			Score:  float64(tm),
 			Member: c.GetApplicant(ctx, value),
 		})
@@ -348,7 +355,8 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 	if len(application) == 0 {
 		return false
 	}
-	if result := currentClient().HExists(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
+	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	if result := client.HExists(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
 	return false
@@ -356,7 +364,8 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 
 // GetApplicant 根据"申请"获取申请人。如果申请人不存在，则返回空字符串。
 func (c *Activity) GetApplicant(ctx context.Context, application string) string {
-	if result := currentClient().HGet(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
+	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	if result := client.HGet(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
 	return ""
@@ -364,7 +373,8 @@ func (c *Activity) GetApplicant(ctx context.Context, application string) string 
 
 // GetSeatCount 获取已确定"席位"的数量。
 func (c *Activity) GetSeatCount(ctx context.Context) int64 {
-	if result := currentClient().ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf"); result.Err() == nil {
+	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	if result := client.ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf"); result.Err() == nil {
 		return result.Val()
 	}
 	return 0

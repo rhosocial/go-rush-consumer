@@ -50,7 +50,7 @@ func main() {
 
 func initExamples() error {
 	activityID := uint64(time.Now().Unix())
-	if err := component.Activities.New(activityID); err != nil {
+	if err := component.Activities.New(activityID, nil); err != nil {
 		return err
 	}
 	if _, err := component.Activities.GetActivity(activityID); err != nil {

@@ -1,7 +1,6 @@
 package component
 
 import (
-	"context"
 	"log"
 	"os"
 	"strconv"
@@ -168,6 +167,7 @@ func LoadEnvFromYaml(filepath string) error {
 
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
+	/**
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
 	defer func() {
 		if err := recover(); err == commonComponent.ErrRedisClientNil || err == commonComponent.ErrRedisClientsNotAvailable {
@@ -180,7 +180,7 @@ func LoadEnvFromYaml(filepath string) error {
 			println(err)
 		}
 		currentClient().FunctionLoadReplace(context.Background(), string(contents))
-	}
+	}*/
 	return nil
 }
 
