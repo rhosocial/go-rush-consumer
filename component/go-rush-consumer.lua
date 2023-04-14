@@ -1,5 +1,15 @@
 #!lua name=go_rush_consumer
 
+local function get_timestamp_micro()
+    local time = redis.call("TIME")
+    return time[1]*1000000 + time[2]
+end
+
+local function get_timestamp_milli()
+    local time = redis.call("TIME")
+    return time[1]*1000 + time[2]/1000
+end
+
 local function check_applicant_exists_by_application(key, application)
     return redis.call("HEXISTS", key, application)
 end
@@ -9,9 +19,7 @@ local function get_applicant_by_application(key, application)
 end
 
 local function push_applicant_into_seats(key, applicant)
-    local time = redis.call("TIME")
-    local timestamp = time[1]*1000000 + time[2]
-    return redis.call("ZADD", key, "NX", timestamp, applicant)
+    return redis.call("ZADD", key, "NX", get_timestamp_micro(), applicant)
 end
 
 local function pop_applications_and_push_into_seats(keys, args)
@@ -49,4 +57,9 @@ local function pop_applications_and_push_into_seats(keys, args)
     return {#applications, newly_confirmed, applications_skipped, applicants_missing}
 end
 
+local function go_rush_consumer_version(keys, args)
+    return {0, 0, 1}
+end
+
 redis.register_function('pop_applications_and_push_into_seats', pop_applications_and_push_into_seats)
+redis.register_function('go_rush_consumer_version', go_rush_consumer_version)

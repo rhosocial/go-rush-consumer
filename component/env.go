@@ -1,6 +1,7 @@
 package component
 
 import (
+	"context"
 	"log"
 	"os"
 	"strconv"
@@ -168,6 +169,13 @@ func LoadEnvFromYaml(filepath string) error {
 	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
+	if currentClient() != nil {
+		contents, err := os.ReadFile("component/go-rush-consumer.lua")
+		if err != nil {
+			println(err)
+		}
+		currentClient().FunctionLoadReplace(context.Background(), string(contents))
+	}
 	return nil
 }
 
