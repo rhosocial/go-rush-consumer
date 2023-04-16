@@ -51,6 +51,7 @@ func (a *ActivityPool) New(id uint64, index *uint8) error {
 	a.Activities[id] = &Activity{
 		ID:               id,
 		RedisServerIndex: index0,
+		Batch:            10000,
 	}
 	return nil
 }
@@ -144,7 +145,8 @@ func (a *ActivityPool) StopAll() int {
 // Activity 活动
 type Activity struct {
 	ID                      uint64
-	RedisServerIndex        uint8
+	RedisServerIndex        uint8  `json:"redis_server_index" default:"0"`
+	Batch                   uint16 `json:"batch" default:"10000"`
 	contextCancelFuncRWLock sync.RWMutex
 	contextCancelFunc       context.CancelCauseFunc
 }
@@ -171,10 +173,6 @@ var ErrWorkerStopped = errors.New("the worker stopped")
 // 若当前无有效 Redis 客户端，则报 ErrRedisClientNil 异常。
 // 若当前活动已经启动了工作协程，则返回 ErrWorkerIsWorking 异常。
 func (c *Activity) Start(ctx context.Context) error {
-	turn := commonComponent.GlobalRedisClientPool.GetCurrentTurn()
-	if turn == nil {
-		panic(commonComponent.ErrRedisClientNil)
-	}
 	c.contextCancelFuncRWLock.Lock()
 	defer c.contextCancelFuncRWLock.Unlock()
 	if c.contextCancelFunc != nil {
@@ -182,12 +180,7 @@ func (c *Activity) Start(ctx context.Context) error {
 	}
 	ctxChild, cancel := context.WithCancelCause(ctx)
 	c.contextCancelFunc = cancel
-	server := (*(*GlobalEnv).RedisServers)[*turn]
-	interval := server.GetWorkerDefault().Interval
-	if server.Worker != nil {
-		interval = server.Worker.Interval
-	}
-	go worker(ctxChild, interval, c.ID, processFunc3, nil)
+	go worker(ctxChild, 1000, c.ID, processFunc3, nil)
 	return nil
 }
 
@@ -206,7 +199,7 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 		activity.GetRedisServerApplicationKeyName(),
 		activity.GetRedisServerApplicantKeyName(),
 		activity.GetRedisServerSeatKeyName(),
-	}, *(*(*GlobalEnv).Activity).Batch).Uint64Slice(); err == nil {
+	}, activity.Batch).Uint64Slice(); err == nil {
 		log.Printf("[ActivityID: %d]: %d application(s): %d seat(s) newly confirmed, %d skipped, %d applicant(s) missing.\n",
 			activityID, val[0], val[1], val[2], val[3])
 	} else {

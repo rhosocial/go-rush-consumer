@@ -107,7 +107,7 @@ func TestLoadEnvFromYaml_EmptyContent(t *testing.T) {
 			return
 		}
 		assert.NotNil(t, (*GlobalEnv).Activity, "The `Activity` attribute of `GlobalEnv` should not be `nil`.")
-		assert.Equal(t, uint8(100), *(*(*GlobalEnv).Activity).Batch, "The default batch is `100` when not defined.")
+		assert.Equal(t, uint16(1000), *(*(*GlobalEnv).Activity).Batch, "The default batch is `100` when not defined.")
 	})
 }
 
@@ -137,7 +137,7 @@ func TestLoadEnvFromSystemEnvVar(t *testing.T) {
 		return
 	}
 	assert.Equal(t, uint16(8080), *(*(*GlobalEnv).Net).ListenPort)
-	assert.Equal(t, uint8(100), *(*(*GlobalEnv).Activity).Batch)
+	assert.Equal(t, uint16(1000), *(*(*GlobalEnv).Activity).Batch)
 
 	_, exist := os.LookupEnv("Net.ListenPort")
 	assert.False(t, exist)
@@ -157,5 +157,5 @@ func TestLoadEnvFromSystemEnvVar(t *testing.T) {
 		return
 	}
 	assert.Equal(t, uint16(8081), *(*(*GlobalEnv).Net).ListenPort)
-	assert.Equal(t, uint8(127), *(*(*GlobalEnv).Activity).Batch)
+	assert.Equal(t, uint16(127), *(*(*GlobalEnv).Activity).Batch)
 }

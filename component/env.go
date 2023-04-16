@@ -47,7 +47,7 @@ func (e *EnvActivityRedisServer) GetKeyPrefixDefault() *EnvActivityRedisServerKe
 
 type EnvActivity struct {
 	RedisServer *EnvActivityRedisServer `yaml:"RedisServer"`
-	Batch       *uint8                  `yaml:"Batch,omitempty" default:"100"`
+	Batch       *uint16                 `yaml:"Batch,omitempty" default:"1000"`
 }
 
 func (e *EnvActivity) GetRedisServerDefault() *EnvActivityRedisServer {
@@ -56,8 +56,8 @@ func (e *EnvActivity) GetRedisServerDefault() *EnvActivityRedisServer {
 	return &rs
 }
 
-func (e *EnvActivity) GetBatchDefault() *uint8 {
-	batch := uint8(100)
+func (e *EnvActivity) GetBatchDefault() *uint16 {
+	batch := uint16(1000)
 	return &batch
 }
 
@@ -200,7 +200,7 @@ func LoadEnvFromSystemEnvVar() error {
 	if value, exist := os.LookupEnv("Activity.Batch"); exist {
 		log.Println("Activity.Batch: ", value)
 		batch, _ := strconv.ParseUint(value, 10, 8)
-		*(*GlobalEnv.Activity).Batch = uint8(batch)
+		*(*GlobalEnv.Activity).Batch = uint16(batch)
 	}
 	return nil
 }
