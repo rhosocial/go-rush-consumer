@@ -12,4 +12,7 @@ COPY component ./component
 COPY controllers ./controllers
 COPY go.mod go.sum main.go ./
 
-RUN go mod tidy && go build -v ./...
+RUN go mod tidy
+RUN go build
+
+CMD ["./go-rush-consumer"]

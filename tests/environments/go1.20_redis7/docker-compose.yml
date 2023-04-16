@@ -1,29 +1,29 @@
 version: "3.8"
 services:
-  go:
-    build:
-      context: ../../..
-      dockerfile: tests/environments/go1.20_redis7/golang_alpine/Dockerfile
-    image: golang:go1.20_redis7
-    working_dir: /opt/project
-    ports:
-      - "8080:8080"
-    networks:
-      - dev
-    volumes:
-      - ../../../../go-rush-consumer:/opt/project
-    depends_on:
-      - redis
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 256M
+#  go:
+#    # build:
+#      # context: .
+#      # dockerfile: golang_alpine/Dockerfile
+#    image: golang:alpine
+#    working_dir: /app
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - dev
+#    # volumes:
+#    #   - ../../../../go-rush-consumer:/app
+#    depends_on:
+#      - redis
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 1G
+#        reservations:
+#          memory: 256M
   redis:
     image: redis:7
     ports:
-      - "8379:6379"
+      - "6379:6379"
     networks:
       - dev
     volumes:

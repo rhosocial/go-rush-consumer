@@ -165,7 +165,6 @@ func LoadEnvFromYaml(filepath string) error {
 		return err
 	}
 
-	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	/**
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient

@@ -1,6 +1,7 @@
 package component
 
 import (
+	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"os"
 	"testing"
 
@@ -41,9 +42,12 @@ func createTempFiles(t *testing.T) {
 func setupEnvFiles(t *testing.T) {
 	createTempDirs(t)
 	createTempFiles(t)
+
+	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
 }
 
 func teardownEnvFiles(t *testing.T) {
+	commonComponent.GlobalRedisClientPool = nil
 	if yamlEmptyFile != nil {
 		if err := yamlEmptyFile.Close(); err != nil {
 			t.Log(err)
