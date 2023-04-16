@@ -10,7 +10,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  go1.20_redis7:
+  go20_redis7:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
