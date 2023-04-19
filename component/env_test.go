@@ -57,22 +57,22 @@ func teardownEnvFiles(t *testing.T) {
 }
 
 func setupEnvVars(t *testing.T) {
-	if err := os.Setenv("Net.ListenPort", "8081"); err != nil {
+	if err := os.Setenv("Consumer_Net_ListenPort", "8081"); err != nil {
 		t.Error(err)
 		return
 	}
-	if err := os.Setenv("Activity.Batch", "127"); err != nil {
+	if err := os.Setenv("Consumer_Activity_Batch", "127"); err != nil {
 		t.Error(err)
 		return
 	}
 }
 
 func teardownEnvVars(t *testing.T) {
-	if err := os.Unsetenv("Net.ListenPort"); err != nil {
+	if err := os.Unsetenv("Consumer_Net_ListenPort"); err != nil {
 		t.Error(err)
 		return
 	}
-	if err := os.Unsetenv("Activity.Batch"); err != nil {
+	if err := os.Unsetenv("Consumer_Activity_Batch"); err != nil {
 		t.Error(err)
 		return
 	}
