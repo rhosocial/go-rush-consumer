@@ -192,13 +192,13 @@ func LoadEnvFromSystemEnvVar() error {
 		}
 		GlobalEnv = &env
 	}
-	if value, exist := os.LookupEnv("Net.ListenPort"); exist {
-		log.Println("Net.ListenPort: ", value)
+	if value, exist := os.LookupEnv("Consumer_Net_ListenPort"); exist {
+		log.Println("Consumer_Net_ListenPort: ", value)
 		port, _ := strconv.ParseUint(value, 10, 16)
 		*(*GlobalEnv.Net).ListenPort = uint16(port)
 	}
-	if value, exist := os.LookupEnv("Activity.Batch"); exist {
-		log.Println("Activity.Batch: ", value)
+	if value, exist := os.LookupEnv("Consumer_Activity_Batch"); exist {
+		log.Println("Consumer_Activity_Batch: ", value)
 		batch, _ := strconv.ParseUint(value, 10, 8)
 		*(*GlobalEnv.Activity).Batch = uint16(batch)
 	}
