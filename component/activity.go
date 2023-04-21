@@ -133,6 +133,9 @@ func (a *ActivityPool) Status() map[uint64]ActivityStatus {
 
 // StopAll 停止所用活动的工作协程。返回成功停止的活动数。
 func (a *ActivityPool) StopAll() int {
+	if a == nil {
+		return 0
+	}
 	count := 0
 	for _, v := range a.Activities {
 		err := v.Stop(ErrAllWorkersStopped)

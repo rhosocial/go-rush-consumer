@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -44,6 +47,7 @@ func main() {
 	if !configEngine(r) {
 		return
 	}
+	SetupCloseHandler()
 	if err := r.Run(fmt.Sprintf(":%d", *(*(*component.GlobalEnv).Net).ListenPort)); err != nil {
 		log.Println(err.Error())
 		return
@@ -74,4 +78,19 @@ func configEngine(r *gin.Engine) bool {
 	var ca controllerActivity.ControllerActivity
 	ca.RegisterActions(r)
 	return true
+}
+
+// SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
+// program if it receives an interrupt from the OS. We then handle this by calling
+// our cleaning-up procedure and exiting the program.
+func SetupCloseHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGKILL)
+	go func() {
+		<-c
+		log.Println("\r- Ctrl+C pressed in Terminal")
+		count := component.Activities.StopAll()
+		log.Printf("%d worker(s) stopped.\n", count)
+		os.Exit(0)
+	}()
 }
