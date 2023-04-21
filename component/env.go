@@ -6,7 +6,8 @@ import (
 	"strconv"
 
 	"github.com/redis/go-redis/v9"
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/environment"
+	componentRedis "github.com/rhosocial/go-rush-common/component/redis"
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,9 +73,9 @@ func (e *EnvActivity) Validate() error {
 }
 
 type Env struct {
-	Net          *EnvNet                           `yaml:"Net,omitempty"`
-	RedisServers *[]commonComponent.EnvRedisServer `yaml:"RedisServers,omitempty"`
-	Activity     *EnvActivity                      `yaml:"Activity,omitempty"`
+	Net          *EnvNet                          `yaml:"Net,omitempty"`
+	RedisServers *[]componentRedis.EnvRedisServer `yaml:"RedisServers,omitempty"`
+	Activity     *EnvActivity                     `yaml:"Activity,omitempty"`
 	redisClients *[]*redis.Client
 }
 
@@ -88,8 +89,8 @@ func (e *Env) GetNetDefault() *EnvNet {
 
 // GetRedisServersDefault 取得 EnvRedisServers 的默认值。
 // 默认值为只想空数组的指针，表示默认没有 redis 服务器。
-func (e *Env) GetRedisServersDefault() *[]commonComponent.EnvRedisServer {
-	servers := make([]commonComponent.EnvRedisServer, 0)
+func (e *Env) GetRedisServersDefault() *[]componentRedis.EnvRedisServer {
+	servers := make([]componentRedis.EnvRedisServer, 0)
 	return &servers
 }
 
@@ -165,7 +166,7 @@ func LoadEnvFromYaml(filepath string) error {
 		return err
 	}
 
-	commonComponent.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
+	environment.GlobalRedisClientPool.InitRedisClientPool(GlobalEnv.RedisServers)
 	/**
 	currentClient = commonComponent.GlobalRedisClientPool.GetCurrentClient
 	defer func() {

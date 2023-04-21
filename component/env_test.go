@@ -1,10 +1,11 @@
 package component
 
 import (
-	commonComponent "github.com/rhosocial/go-rush-common/component"
 	"os"
 	"testing"
 
+	"github.com/rhosocial/go-rush-common/component/environment"
+	"github.com/rhosocial/go-rush-common/component/redis"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,11 +44,11 @@ func setupEnvFiles(t *testing.T) {
 	createTempDirs(t)
 	createTempFiles(t)
 
-	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
+	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
 }
 
 func teardownEnvFiles(t *testing.T) {
-	commonComponent.GlobalRedisClientPool = nil
+	environment.GlobalRedisClientPool = nil
 	if yamlEmptyFile != nil {
 		if err := yamlEmptyFile.Close(); err != nil {
 			t.Log(err)

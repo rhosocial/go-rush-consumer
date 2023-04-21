@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/environment"
+	"github.com/rhosocial/go-rush-common/component/redis"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,11 +18,11 @@ func setupActivityWork(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
-	commonComponent.GlobalRedisClientPool.InitRedisClientPool(&[]commonComponent.EnvRedisServer{
+	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
+	environment.GlobalRedisClientPool.InitRedisClientPool(&[]redis.EnvRedisServer{
 		{
-			Host:     "localhost",
-			Port:     6379,
+			Host:     "1.n.rho.im",
+			Port:     16479,
 			Username: "",
 			Password: "",
 			DB:       0,
@@ -32,7 +33,7 @@ func setupActivityWork(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	commonComponent.GlobalRedisClientPool.GetClient(&index).FunctionLoadReplace(context.Background(), string(content))
+	environment.GlobalRedisClientPool.GetClient(&index).FunctionLoadReplace(context.Background(), string(content))
 	Activities = InitActivityPool()
 }
 
@@ -41,7 +42,7 @@ func teardownActivityWork(t *testing.T) {
 		Activities.RemoveAll()
 	}
 	Activities = nil
-	commonComponent.GlobalRedisClientPool = nil
+	environment.GlobalRedisClientPool = nil
 }
 
 func setupActivityWorkCase(t *testing.T, activityID uint64) {
@@ -56,7 +57,7 @@ func teardownActivityWorkCase(t *testing.T, activityID uint64) {
 	if err != nil {
 		t.Error(err)
 	}
-	client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 	if err = client.Close(); err != nil {
 		t.Error(err)
 	}
@@ -107,7 +108,7 @@ func TestWorking_Key(t *testing.T) {
 
 		assert.False(t, activity.IsWorking())
 
-		client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+		client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 		assert.NotNil(t, client)
 
 		count := uint16(rand.Uint32() % (1 << 8))
@@ -148,7 +149,7 @@ func TestWorking_ConfirmSeatsAfterApplications(t *testing.T) {
 
 		assert.False(t, activity.IsWorking())
 
-		client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+		client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 		applicationCount := uint16(1 << 12)
 		applications := randomStringSlice(&applicationCount, "application_")
 		applicantCount := uint16(1 << 8)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/environment"
 )
 
 // processFunc 工作协程。
@@ -42,7 +42,7 @@ var processFunc = func(ctx context.Context, activityID uint64) {
 var processFunc2 = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
-	client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +95,7 @@ var processFunc2 = func(ctx context.Context, activityID uint64) {
 // PopApplicationsFromQueue 从申请队列中取出。
 func (c *Activity) PopApplicationsFromQueue(ctx context.Context) []string {
 	batch := int(*(*(*GlobalEnv).Activity).Batch)
-	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	if result := client.LLen(ctx, c.GetRedisServerApplicationKeyName()); result.Err() != nil {
 		panic(result.Err())
 	} else {
@@ -112,7 +112,7 @@ func (c *Activity) PushApplicationsIntoSeatQueue(ctx context.Context, applicatio
 		return 0
 	}
 	count := int64(0)
-	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	for _, value := range applications {
 		if !c.ApplicationExists(ctx, value) {
 			continue
@@ -136,7 +136,7 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 	if len(application) == 0 {
 		return false
 	}
-	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	if result := client.HExists(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
@@ -145,7 +145,7 @@ func (c *Activity) ApplicationExists(ctx context.Context, application string) bo
 
 // GetApplicant 根据"申请"获取申请人。如果申请人不存在，则返回空字符串。
 func (c *Activity) GetApplicant(ctx context.Context, application string) string {
-	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	if result := client.HGet(ctx, c.GetRedisServerApplicantKeyName(), application); result.Err() == nil {
 		return result.Val()
 	}
@@ -154,7 +154,7 @@ func (c *Activity) GetApplicant(ctx context.Context, application string) string 
 
 // GetSeatCount 获取已确定"席位"的数量。
 func (c *Activity) GetSeatCount(ctx context.Context) int64 {
-	client := commonComponent.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&c.RedisServerIndex)
 	if result := client.ZCount(ctx, c.GetRedisServerSeatKeyName(), "-inf", "+inf"); result.Err() == nil {
 		return result.Val()
 	}

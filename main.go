@@ -9,7 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/auth"
+	"github.com/rhosocial/go-rush-common/component/environment"
+	componentError "github.com/rhosocial/go-rush-common/component/error"
+	"github.com/rhosocial/go-rush-common/component/logger"
+	"github.com/rhosocial/go-rush-common/component/redis"
 	"github.com/rhosocial/go-rush-consumer/component"
 	controllerActivity "github.com/rhosocial/go-rush-consumer/controllers/activity"
 	"github.com/rhosocial/go-rush-consumer/controllers/server"
@@ -20,7 +24,7 @@ var r *gin.Engine
 func main() {
 	log.Println("Hello, World!")
 
-	commonComponent.GlobalRedisClientPool = &commonComponent.RedisClientPool{}
+	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
 
 	// 最初初始化所有配置参数为默认值。
 	err := component.LoadEnvDefault()
@@ -67,11 +71,11 @@ func initExamples() error {
 
 func configEngine(r *gin.Engine) bool {
 	r.Use(
-		commonComponent.AppendRequestID(),
-		gin.LoggerWithFormatter(commonComponent.LogFormatter),
-		commonComponent.AuthRequired(),
+		logger.AppendRequestID(),
+		gin.LoggerWithFormatter(logger.LogFormatter),
+		auth.AuthRequired(),
 		gin.Recovery(),
-		commonComponent.ErrorHandler(),
+		componentError.ErrorHandler(),
 	)
 	var cs controllerServer.ControllerServer
 	cs.RegisterActions(r)

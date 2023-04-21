@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/controller"
 	"github.com/rhosocial/go-rush-consumer/component"
 	"golang.org/x/net/context"
 )
@@ -18,15 +18,15 @@ type ActivityBody struct {
 func (a *ControllerActivity) ActionStatus(c *gin.Context) {
 	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
 	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, a.NewResponseGeneric(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity existed", !activity.IsWorking(), nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "activity existed", !activity.IsWorking(), nil))
 }
 
 type ActivityBodyAdd struct {
@@ -37,54 +37,54 @@ type ActivityBodyAdd struct {
 func (a *ControllerActivity) ActionStart(c *gin.Context) {
 	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
 	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, a.NewResponseGeneric(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
 	err = activity.Start(context.Background())
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusOK, commonComponent.NewGenericResponse(c, 1, "failed to start a worker", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusOK, a.NewResponseGeneric(c, 1, "failed to start a worker", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "the worker has started", nil, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "the worker has started", nil, nil))
 }
 
 func (a *ControllerActivity) ActionStop(c *gin.Context) {
 	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
 	activity, err := component.Activities.GetActivity(activityID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, a.NewResponseGeneric(c, 1, "activity not found", err.Error(), nil))
 		return
 	}
 	err = activity.Stop(component.ErrWorkerStopped)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusOK, commonComponent.NewGenericResponse(c, 1, "failed to stop a worker", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusOK, a.NewResponseGeneric(c, 1, "failed to stop a worker", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "the worker stopped", nil, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "the worker stopped", nil, nil))
 }
 
 func (a *ControllerActivity) ActionAdd(c *gin.Context) {
 	var body ActivityBodyAdd
 	err := c.ShouldBindWith(&body, binding.FormPost)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
 	err = component.Activities.New(body.ActivityID, body.RedisServerIndex)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "failed to add new activity", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "failed to add new activity", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity added", nil, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "activity added", nil, nil))
 }
 
 type ActivityBodyDelete struct {
@@ -95,7 +95,7 @@ type ActivityBodyDelete struct {
 func (a *ControllerActivity) ActionDelete(c *gin.Context) {
 	activityID, err := strconv.ParseUint(c.Param("activityID"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "activity not valid", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "activity not valid", err.Error(), nil))
 		return
 	}
 	stopBeforeRemoving, err := strconv.ParseBool(c.Param("stopBeforeRemoving"))
@@ -104,22 +104,22 @@ func (a *ControllerActivity) ActionDelete(c *gin.Context) {
 	}
 	err = component.Activities.Remove(activityID, stopBeforeRemoving)
 	if err == component.ErrActivityNotExist {
-		c.AbortWithStatusJSON(http.StatusNotFound, commonComponent.NewGenericResponse(c, 1, "activity not found", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusNotFound, a.NewResponseGeneric(c, 1, "activity not found", err.Error(), nil))
 		return
 	} else if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, commonComponent.NewGenericResponse(c, 1, "failed to remove the activity", err.Error(), nil))
+		c.AbortWithStatusJSON(http.StatusBadRequest, a.NewResponseGeneric(c, 1, "failed to remove the activity", err.Error(), nil))
 		return
 	}
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "activity removed", nil, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "activity removed", nil, nil))
 }
 
 func (a *ControllerActivity) ActionStopAll(c *gin.Context) {
 	count := component.Activities.StopAll()
-	c.JSON(http.StatusOK, commonComponent.NewGenericResponse(c, 0, "all the workers stopped.", count, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "all the workers stopped.", count, nil))
 }
 
 type ControllerActivity struct {
-	commonComponent.GenericController
+	controller.GenericController
 }
 
 func (a *ControllerActivity) RegisterActions(r *gin.Engine) {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	commonComponent "github.com/rhosocial/go-rush-common/component"
+	"github.com/rhosocial/go-rush-common/component/environment"
 )
 
 var Activities *ActivityPool
@@ -195,7 +195,7 @@ func (c *Activity) Start(ctx context.Context) error {
 var processFunc3 = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
-	client := commonComponent.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+	client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
 	if err != nil {
 		panic(err)
 	}
