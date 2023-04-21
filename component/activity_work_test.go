@@ -174,6 +174,5 @@ func TestWorking_ConfirmSeatsAfterApplications(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		println("Hello, World!")
 	})
 }

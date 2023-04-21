@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	commonComponent "github.com/rhosocial/go-rush-common/component"
 )
@@ -195,13 +196,18 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 	if err != nil {
 		panic(err)
 	}
+	tmStart := time.Now()
 	if val, err := client.FCall(ctx, "pop_applications_and_push_into_seats", []string{
 		activity.GetRedisServerApplicationKeyName(),
 		activity.GetRedisServerApplicantKeyName(),
 		activity.GetRedisServerSeatKeyName(),
 	}, activity.Batch).Uint64Slice(); err == nil {
-		log.Printf("[ActivityID: %d]: %d application(s): %d seat(s) newly confirmed, %d skipped, %d applicant(s) missing.\n",
-			activityID, val[0], val[1], val[2], val[3])
+		timeElapsed := time.Now().Sub(tmStart)
+		if timeElapsed > time.Minute {
+			timeElapsed = timeElapsed.Truncate(time.Second)
+		}
+		log.Printf("[ActivityID: %d]: %d application(s): %d seat(s) newly confirmed, %d skipped, %d applicant(s) missing, time elapsed : %13v.\n",
+			activityID, val[0], val[1], val[2], val[3], timeElapsed)
 	} else {
 		log.Printf("[ActivityID: %d]: %s\n", activityID, err.Error())
 		panic(err)
