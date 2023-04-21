@@ -18,7 +18,7 @@ jobs:
       - name: Build and start containers
         run: |
           docker-compose -f tests/environments/go1.20_redis7/docker-compose.yml up -d --build && docker ps
-          sleep(1)
+          sleep 60
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
