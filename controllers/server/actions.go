@@ -18,7 +18,7 @@ type ActionStatusResponseData struct {
 }
 
 type RedisServerStatus struct {
-	redis.RedisServerStatus
+	redis.ServerStatus
 	LuaModuleVersion string `json:"lua_module_version"`
 }
 
@@ -37,8 +37,8 @@ func (a *ControllerServer) ActionStatus(c *gin.Context) {
 			version = err.Error()
 		}
 		status[i] = RedisServerStatus{
-			RedisServerStatus: v,
-			LuaModuleVersion:  version,
+			ServerStatus:     v,
+			LuaModuleVersion: version,
 		}
 	}
 	data := ActionStatusResponseData{

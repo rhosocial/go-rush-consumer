@@ -24,7 +24,7 @@ var r *gin.Engine
 func main() {
 	log.Println("Hello, World!")
 
-	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
+	environment.GlobalRedisClientPool = &redis.ClientPool{}
 
 	// 最初初始化所有配置参数为默认值。
 	err := component.LoadEnvDefault()

@@ -18,7 +18,7 @@ func setupActivityWork(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
+	environment.GlobalRedisClientPool = &redis.ClientPool{}
 	environment.GlobalRedisClientPool.InitRedisClientPool(&[]redis.EnvRedisServer{
 		{
 			Host:     "localhost",

@@ -44,7 +44,7 @@ func setupEnvFiles(t *testing.T) {
 	createTempDirs(t)
 	createTempFiles(t)
 
-	environment.GlobalRedisClientPool = &redis.RedisClientPool{}
+	environment.GlobalRedisClientPool = &redis.ClientPool{}
 }
 
 func teardownEnvFiles(t *testing.T) {
