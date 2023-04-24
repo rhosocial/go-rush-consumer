@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/redis/go-redis/v9 v9.0.3
-	github.com/rhosocial/go-rush-common v0.0.0-20230423041041-09f6601941b9
+	github.com/rhosocial/go-rush-common v0.0.0-20230423050114-60f622e1410d
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/net v0.8.0
 	gopkg.in/yaml.v3 v3.0.1

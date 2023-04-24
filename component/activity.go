@@ -233,7 +233,7 @@ func (c *Activity) Stop(cause error) error {
 
 // IsWorking 判断当前活动协程否正在工作中。
 func (c *Activity) IsWorking() bool {
-	c.contextCancelFuncRWLock.RLock()
-	defer c.contextCancelFuncRWLock.RUnlock()
+	// c.contextCancelFuncRWLock.RLock()
+	// defer c.contextCancelFuncRWLock.RUnlock()
 	return c.contextCancelFunc != nil
 }
