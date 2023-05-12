@@ -13,16 +13,18 @@ import (
 
 var Activities *ActivityPool
 
-// ActivityPool 表示活动池。
+// ActivityPool represents a pool for activity.
 type ActivityPool struct {
-	Activities       map[uint64]*Activity // 活动映射。key 为活动ID。
-	ActivitiesRWLock sync.RWMutex         // 操纵活动的锁。
+	Activities       map[uint64]*Activity // Save all activity records, the key is the activity ID.
+	ActivitiesRWLock sync.RWMutex         // A lock to access the activity pool.
 }
 
-// InitActivityPool 初始化活动池。
-// 用法：
+// InitActivityPool initialize an activity pool.
+//
+// Usage:
 // Activities = InitActivityPool()
-// 请勿直接声明活动池变量，除非你知道这么做的后果。
+//
+// Do not declare live pool variables directly unless you know the consequences of doing so.
 func InitActivityPool() *ActivityPool {
 	a := &ActivityPool{
 		Activities: make(map[uint64]*Activity),
@@ -30,15 +32,17 @@ func InitActivityPool() *ActivityPool {
 	return a
 }
 
-// Capacity 返回活动数量。
+// Capacity returns the number of activities.
 func (a *ActivityPool) Capacity() int {
 	a.ActivitiesRWLock.RLock()
 	defer a.ActivitiesRWLock.RUnlock()
 	return len(a.Activities)
 }
 
-// New 新增一个活动。需要指定活动ID。
-// id 活动ID。新增的活动ID不能与已存在的ID相同，否则会报 ErrActivityExisted 异常。
+// New create an activity.
+// The Activity ID needs to be specified.
+// The newly added activity ID cannot be the same as the existing ID, otherwise an ErrActivityExisted error will be returned.
+// You can specify the target redis server index. If not specified, it will be number 0.
 func (a *ActivityPool) New(id uint64, index *uint8) error {
 	a.ActivitiesRWLock.Lock()
 	defer a.ActivitiesRWLock.Unlock()
@@ -57,7 +61,8 @@ func (a *ActivityPool) New(id uint64, index *uint8) error {
 	return nil
 }
 
-// GetActivity 返回指定活动ID的活动指针。若指定ID的活动不存在，则返回空指针和 ErrActivityNotExist 异常。
+// GetActivity returns the activity pointer for the specified activity ID.
+// If the activity with the specified ID does not exist, return a null pointer and ErrActivityNotExist error.
 func (a *ActivityPool) GetActivity(id uint64) (*Activity, error) {
 	a.ActivitiesRWLock.Lock()
 	defer a.ActivitiesRWLock.Unlock()
@@ -73,10 +78,11 @@ var ErrActivityExisted = errors.New("activity existed")
 var ErrActivityToBeRemoved = errors.New("activity to be removed")
 var ErrAllWorkersStopped = errors.New("all workers stopped")
 
-// Remove 移除指定活动ID。
-// 若指定ID的活动不存在，则报 ErrActivityNotExist 异常。
-// 若 stopBeforeRemoving == false 且活动正在工作中时，则报 ErrWorkerIsWorking 异常。
-// 若未报任何异常，则表示移除成功。
+// Remove removes the activity with specified ID.
+// If the activity with the specified ID does not exist, an ErrActivityNotExist error will be returning.
+// If the activity is working but does not stop before being removed, an ErrWorkerIsWorking error will be reported.
+// If nil is returning, the removal is successful.
+// TODO: Delete the data located in redis after deleting the corresponding activity.
 func (a *ActivityPool) Remove(id uint64, stopBeforeRemoving bool) error {
 	a.ActivitiesRWLock.Lock()
 	defer a.ActivitiesRWLock.Unlock()
@@ -97,7 +103,9 @@ func (a *ActivityPool) Remove(id uint64, stopBeforeRemoving bool) error {
 	return nil
 }
 
-// RemoveAll 移除所有活动，并返回成功移除的个数。
+// RemoveAll removes all activities and return the number of successful removals.
+// If there is an activity in progress, it will be stopped first.
+// TODO: Delete the data located in redis after deleting the corresponding activity.
 func (a *ActivityPool) RemoveAll() int {
 	a.ActivitiesRWLock.Lock()
 	defer a.ActivitiesRWLock.Unlock()
@@ -120,6 +128,8 @@ type ActivityStatus struct {
 	RedisServerIndex uint8 `json:"redis_server_index"`
 }
 
+// Status returns the status of all activities, such as whether it is working or not,
+// and the index the redis server where the data is located.
 func (a *ActivityPool) Status() map[uint64]ActivityStatus {
 	status := make(map[uint64]ActivityStatus)
 	for _, v := range a.Activities {
@@ -131,7 +141,8 @@ func (a *ActivityPool) Status() map[uint64]ActivityStatus {
 	return status
 }
 
-// StopAll 停止所用活动的工作协程。返回成功停止的活动数。
+// StopAll stops the worker coroutines of all activities,
+// and returns the number of activities that were successfully stopped.
 func (a *ActivityPool) StopAll() int {
 	if a == nil {
 		return 0
@@ -146,13 +157,13 @@ func (a *ActivityPool) StopAll() int {
 	return count
 }
 
-// Activity 活动
+// Activity represents an activity.
 type Activity struct {
 	ID                      uint64
-	RedisServerIndex        uint8  `json:"redis_server_index" default:"0"`
-	Batch                   uint16 `json:"batch" default:"10000"`
-	contextCancelFuncRWLock sync.RWMutex
-	contextCancelFunc       context.CancelCauseFunc
+	RedisServerIndex        uint8                   `json:"redis_server_index" default:"0"` //
+	Batch                   uint16                  `json:"batch" default:"10000"`          // The number of applications processed in each batch.
+	contextCancelFuncRWLock sync.RWMutex            // A lock for manipulating the context cancellation handle.
+	contextCancelFunc       context.CancelCauseFunc // context cancellation handle
 }
 
 func (c *Activity) GetRedisServerApplicationKeyName() string {
@@ -170,12 +181,14 @@ func (c *Activity) GetRedisServerSeatKeyName() string {
 var ErrWorkerHasBeenStopped = errors.New("the worker has already been stopped")
 var ErrWorkerIsWorking = errors.New("the worker is working")
 
-// ErrWorkerStopped 任务成功停止。但停止要提供 errors 类原因，因此该成功状态仍记为异常。
+// ErrWorkerStopped indicates that the worker has stopped.
 var ErrWorkerStopped = errors.New("the worker stopped")
 
-// Start 启动一个活动的工作协程。若启动成功，则不会报异常且返回 nil。
-// 若当前无有效 Redis 客户端，则报 ErrRedisClientNil 异常。
-// 若当前活动已经启动了工作协程，则返回 ErrWorkerIsWorking 异常。
+// Start a worker coroutine for an activity.
+//
+// Returns nil if started successfully.
+// If the redis client is invalid, an ErrRedisClientNil error will be returned.
+// If the corresponding activity has already started the worker coroutine, an ErrWorkerIsWorking error will be returned.
 func (c *Activity) Start(ctx context.Context) error {
 	c.contextCancelFuncRWLock.Lock()
 	defer c.contextCancelFuncRWLock.Unlock()
@@ -188,10 +201,14 @@ func (c *Activity) Start(ctx context.Context) error {
 	return nil
 }
 
-// processFunc3 工作协程。
-// 从申请队列中取出一批，再送入席位
-// 以下方式为从“申请”队列中取得一批“申请”，然后再送入“席位”有序表。该做法采用送入一次性执行的 lua 脚本而实现“取”和“存”的原子化，即不会因“席位”变化
-// 中失败，也不会因为多个工作进程而导致乱序，又因一次性操作减少了与客户端交互的次数。因此推荐采用该做法。
+// A batch is taken from the application queue and sent into the seat for confirmation.
+//
+// This method relies on the redis function "pop_applications_and_push_into_seats".
+// Therefore, before using this method, you need to prepare relevant redis functions.
+// Since this method is executed by the Lua script of redis,
+// this operation can avoid failure due to changes in related keys,
+// and it will not cause out-of-sequence that may be caused by simultaneous execution of multiple worker processes,
+// and it can also shorten the interaction time with the client.
 var processFunc3 = func(ctx context.Context, activityID uint64) {
 	log.Printf("[ActivityID: %d] working...\n", activityID)
 	activity, err := Activities.GetActivity(activityID)
@@ -217,9 +234,11 @@ var processFunc3 = func(ctx context.Context, activityID uint64) {
 	}
 }
 
-// Stop 停止一个活动的工作协程。若停止成功，则返回 nil。
-// 停止必须指定原因。如果为成功停止，则传入 ErrWorkerStopped。
-// 若指定的活动的工作协程已停止，则会返回 ErrWorkerHasBeenStopped 异常。
+// Stop a worker coroutine for an activity.
+//
+// Return nil if stopped successfully.
+// A stop must specify a reason. If it is successfully stopped, ErrWorkerStopped is passed in.
+// If the worker coroutine for the specified activity has stopped, an ErrWorkerHasBeenStopped err will be returned.
 func (c *Activity) Stop(cause error) error {
 	c.contextCancelFuncRWLock.Lock()
 	defer c.contextCancelFuncRWLock.Unlock()
@@ -231,7 +250,7 @@ func (c *Activity) Stop(cause error) error {
 	return nil
 }
 
-// IsWorking 判断当前活动协程否正在工作中。
+// IsWorking determine whether the current coroutine for activity is working.
 func (c *Activity) IsWorking() bool {
 	// c.contextCancelFuncRWLock.RLock()
 	// defer c.contextCancelFuncRWLock.RUnlock()

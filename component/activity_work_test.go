@@ -21,8 +21,8 @@ func setupActivityWork(t *testing.T) {
 	environment.GlobalRedisClientPool = &redis.ClientPool{}
 	environment.GlobalRedisClientPool.InitRedisClientPool(&[]redis.EnvRedisServer{
 		{
-			Host:     "localhost",
-			Port:     6379,
+			Host:     "1.n.rho.im",
+			Port:     16479,
 			Username: "",
 			Password: "",
 			DB:       0,
@@ -66,7 +66,8 @@ func teardownActivityWorkCase(t *testing.T, activityID uint64) {
 	}
 }
 
-// randomStringSlice 生成随机数量的字符串切片，也可以生成指定数量。
+// randomStringSlice generates no more than 65535 string slices with specified prefix,
+// or a specified number of string slices.
 func randomStringSlice(count *uint16, prefix string) *[]string {
 	total := rand.Uint32() % (1 << 16)
 	if count != nil && *count > 0 {
@@ -79,7 +80,10 @@ func randomStringSlice(count *uint16, prefix string) *[]string {
 	return &result
 }
 
-// randomPairSlice 生成两个字符串切片的随机组合。
+// randomPairSlice randomly matches two string slices.
+//
+// The returned format is key1, value1, key2, value2, ...
+// The length is twice the length of `slice1` minus 1, that is, at least one member in `slice1` is not selected.
 func randomPairSlice(slice1 *[]string, slice2 *[]string) *[]string {
 	if slice1 == nil || slice2 == nil {
 		return nil
@@ -92,6 +96,7 @@ func randomPairSlice(slice1 *[]string, slice2 *[]string) *[]string {
 	return &result
 }
 
+// TestWorking_Key checks the pushing and popping of applications.
 func TestWorking_Key(t *testing.T) {
 	setupActivityWork(t)
 	defer teardownActivityWork(t)
@@ -106,14 +111,16 @@ func TestWorking_Key(t *testing.T) {
 			t.Error(err)
 		}
 
-		assert.False(t, activity.IsWorking())
+		assert.False(t, activity.IsWorking()) // The newly added activity is not in working.
 
 		client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
-		assert.NotNil(t, client)
+		assert.NotNil(t, client, "The redis client must be valid.")
 
+		// Randomly generate 256 applications.
 		count := uint16(rand.Uint32() % (1 << 8))
 		applications := randomStringSlice(&count, "application_")
 
+		// Send them to redis in turn.
 		for i, v := range *applications {
 			result := client.RPush(context.Background(), activity.GetRedisServerApplicationKeyName(), v)
 			if result.Err() != nil {
@@ -121,6 +128,8 @@ func TestWorking_Key(t *testing.T) {
 				return
 			}
 		}
+
+		// Check that the contents taken out are in the same order as they were brought in.
 		resultPop := client.LPopCount(context.Background(), activity.GetRedisServerApplicationKeyName(), int(count))
 		if resultPop.Err() != nil {
 			t.Error(resultPop.Err())
@@ -133,6 +142,7 @@ func TestWorking_Key(t *testing.T) {
 	})
 }
 
+// TestWorking_ConfirmSeatsAfterApplications
 func TestWorking_ConfirmSeatsAfterApplications(t *testing.T) {
 	setupActivityWork(t)
 	defer teardownActivityWork(t)
@@ -150,11 +160,15 @@ func TestWorking_ConfirmSeatsAfterApplications(t *testing.T) {
 		assert.False(t, activity.IsWorking())
 
 		client := environment.GlobalRedisClientPool.GetClient(&activity.RedisServerIndex)
+
+		// Randomly generate 4096 applications.
 		applicationCount := uint16(1 << 12)
 		applications := randomStringSlice(&applicationCount, "application_")
+		// Randomly generate 256 applicants.
 		applicantCount := uint16(1 << 8)
 		applicants := randomStringSlice(&applicantCount, "applicant_")
 
+		// Send applications generated to redis in turn.
 		for i, v := range *applications {
 			result := client.RPush(context.Background(), activity.GetRedisServerApplicationKeyName(), v)
 			if result.Err() != nil {
@@ -163,13 +177,17 @@ func TestWorking_ConfirmSeatsAfterApplications(t *testing.T) {
 			}
 		}
 
+		// Applicants and applications are randomly matched,
 		applicantByApplicationPairs := randomPairSlice(applications, applicants)
+		// and send them to redis.
 		client.HSet(context.Background(), activity.GetRedisServerApplicantKeyName(), *applicantByApplicationPairs)
 
+		// Start a worker,
 		if err := activity.Start(context.Background()); err != nil {
 			t.Error(err)
 			return
 		}
+		// and wait 3 seconds. This period is long enough to process all applications.
 		time.Sleep(3 * time.Second)
 		if err := activity.Stop(ErrWorkerStopped); err != nil {
 			t.Error(err)

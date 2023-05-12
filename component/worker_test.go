@@ -54,14 +54,14 @@ func TestWorker_ActivityExists(t *testing.T) {
 		defer teardownWorkerActivity(t, activityID)
 
 		activity, err := Activities.GetActivity(activityID)
-		assert.Nil(t, err)                      // 已成功添加活动，则不应当报错。
-		assert.NotNil(t, activity)              // 活动应当由内容。
-		assert.IsType(t, &Activity{}, activity) // 活动类型应当与默认一致。
-		assert.False(t, activity.IsWorking())   // 当前活动处于未工作状态。
+		assert.Nil(t, err)                      // The activity has been successfully added and should not throw an error.
+		assert.NotNil(t, activity)              // Activity should not be nil.
+		assert.IsType(t, &Activity{}, activity) // The activity type should be the same as the default.
+		assert.False(t, activity.IsWorking())   // The current activity is not working.
 
 		activity.contextCancelFuncRWLock.Lock()
 
-		// 如果此时上下文取消函数句柄不为空，则视为异常状态。
+		// If the context cancel function handle is not nil at this time, it is considered an abnormal state.
 		if !assert.Nil(t, activity.contextCancelFunc, "The context cancel function handle should be nil.") {
 			activity.contextCancelFuncRWLock.Unlock()
 		}
@@ -73,7 +73,7 @@ func TestWorker_ActivityExists(t *testing.T) {
 		go worker(ctxChild, 1, activity.ID, nil, nil)
 
 		assert.True(t, activity.IsWorking(), "The activity should be working.")
-		time.Sleep(time.Microsecond * 10) // interval 为 1 毫秒，暂停 10 毫秒后应当输出 10 次左右。
+		time.Sleep(time.Microsecond * 10) // With an interval of 1 millisecond, it should output about 10 times after a 10 millisecond pause.
 
 		err = activity.Stop(ErrWorkerStopped)
 		assert.Nil(t, err, "No error should be reported.")
@@ -81,4 +81,6 @@ func TestWorker_ActivityExists(t *testing.T) {
 		err = activity.Stop(ErrWorkerStopped)
 		assert.IsType(t, ErrWorkerHasBeenStopped, err, "If the stopped task stops again, `ErrWorkerHasBeenStopped` should be reported.")
 	})
+
+	//
 }

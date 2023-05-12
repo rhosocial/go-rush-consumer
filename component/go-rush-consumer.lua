@@ -10,10 +10,13 @@ local function get_timestamp_milli()
     return time[1]*1000 + time[2]/1000
 end
 
+-- Check that the application has a corresponding applicant.
+-- If it exists, return 1.
 local function check_applicant_exists_by_application(key, application)
     return redis.call("HEXISTS", key, application)
 end
 
+-- Get the applicant by application.
 local function get_applicant_by_application(key, application)
     return redis.call("HGET", key, application)
 end
