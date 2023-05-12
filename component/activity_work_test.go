@@ -21,8 +21,8 @@ func setupActivityWork(t *testing.T) {
 	environment.GlobalRedisClientPool = &redis.ClientPool{}
 	environment.GlobalRedisClientPool.InitRedisClientPool(&[]redis.EnvRedisServer{
 		{
-			Host:     "1.n.rho.im",
-			Port:     16479,
+			Host:     "localhost",
+			Port:     6379,
 			Username: "",
 			Password: "",
 			DB:       0,
