@@ -45,7 +45,7 @@ func (a *ControllerServer) ActionStatus(c *gin.Context) {
 		RedisServers: status,
 		Activities:   component.Activities.Status(),
 	}
-	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "Activities existed", data, nil))
+	c.JSON(http.StatusOK, a.NewResponseGeneric(c, 0, "success", data, nil))
 }
 
 func (a *ControllerServer) ActionRedisServerFunctionLoadReplace(c *gin.Context) {
